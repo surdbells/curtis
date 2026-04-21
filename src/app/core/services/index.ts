@@ -5,6 +5,7 @@ export * from './camera.service';
 export * from './config.service';
 export * from './connectivity.service';
 export * from './device.service';
+export * from './ip-lookup.service';
 export * from './location.service';
 export * from './offline-queue.service';
 export * from './push.service';

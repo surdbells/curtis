@@ -4,6 +4,8 @@ import { Observable, firstValueFrom, from, map, switchMap, tap } from 'rxjs';
 import { ConfigService } from './config.service';
 import { TokenService } from './token.service';
 import { DeviceService } from './device.service';
+import { LocationService } from './location.service';
+import { IpLookupService } from './ip-lookup.service';
 import { SessionStore } from '../stores/session.store';
 import {
   ApiResponse,
@@ -29,26 +31,31 @@ export class AuthService {
   private readonly config = inject(ConfigService);
   private readonly tokens = inject(TokenService);
   private readonly device = inject(DeviceService);
+  private readonly location = inject(LocationService);
+  private readonly ipLookup = inject(IpLookupService);
   private readonly session = inject(SessionStore);
 
   /**
    * Log in with username + password.
-   * Captures device context and current geolocation for audit.
+   *
+   * Before posting the credentials we gather the device context, public IP,
+   * and a best-effort coarse geolocation in parallel. Each of these is
+   * best-effort — failures fall back to null, they never block the login.
+   *
+   * Pass `coords` if the caller already has a geolocation fix and wants to
+   * skip the in-service lookup (e.g. captured on the login page earlier).
    */
   login(userName: string, password: string, coords?: { latitude?: string; longitude?: string }): Observable<LoginData> {
-    return from(this.device.getContext(true)).pipe(
-      switchMap((ctx) => {
-        const body: LoginRequest = {
+    return from(this.collectLoginContext(coords)).pipe(
+      switchMap((body) => {
+        const payload: LoginRequest = {
+          ...body,
           userName,
           password,
           appId: this.config.appId,
-          device_Imei: ctx.imei ?? ctx.deviceId,
-          iPaddress: ctx.ipAddress ?? null,
-          latitude: coords?.latitude ?? null,
-          longitude: coords?.longitude ?? null,
           loginType: null,
         };
-        return this.http.post<ApiResponse<LoginData>>(this.config.url('/login'), body);
+        return this.http.post<ApiResponse<LoginData>>(this.config.url('/login'), payload);
       }),
       map((res) => {
         if (!isApiSuccess(res)) {
@@ -63,8 +70,33 @@ export class AuthService {
           refreshToken: data.refreshToken,
           expiresAt: data.expiresAt,
         });
+        await this.tokens.rememberUsername(userName);
       }),
     );
+  }
+
+  /**
+   * Gather device context, IP, and geolocation in parallel. Each call is
+   * wrapped so a single failure never rejects the whole set.
+   */
+  private async collectLoginContext(
+    coords?: { latitude?: string; longitude?: string },
+  ): Promise<Pick<LoginRequest, 'device_Imei' | 'iPaddress' | 'latitude' | 'longitude'>> {
+    const [ctx, ip, loc] = await Promise.all([
+      this.device.getContext(true).catch(() => null),
+      this.ipLookup.getPublicIp().catch(() => null),
+      coords ? Promise.resolve(null) : this.location.tryGetCurrent(),
+    ]);
+
+    const latitude = coords?.latitude ?? (loc ? String(loc.latitude) : null);
+    const longitude = coords?.longitude ?? (loc ? String(loc.longitude) : null);
+
+    return {
+      device_Imei: ctx?.imei ?? ctx?.deviceId ?? null,
+      iPaddress: ip,
+      latitude,
+      longitude,
+    };
   }
 
   /**

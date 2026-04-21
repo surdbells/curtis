@@ -1,9 +1,10 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { IonicModule } from '@ionic/angular';
+import { Router, RouterLink } from '@angular/router';
+import { AlertController, IonicModule } from '@ionic/angular';
 import { SessionStore } from '../../core/stores/session.store';
 import { DayStore } from '../../core/stores/day.store';
+import { AuthService } from '../../core/services/auth.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 
 interface Tile {
@@ -70,7 +71,7 @@ interface Tile {
       <ion-toolbar>
         <ion-title>Dashboard</ion-title>
         <ion-buttons slot="end">
-          <ion-button routerLink="/login">
+          <ion-button (click)="confirmLogout()">
             <ion-icon slot="icon-only" name="log-out-outline" />
           </ion-button>
         </ion-buttons>
@@ -111,6 +112,9 @@ interface Tile {
 export class DashboardPage {
   protected readonly session = inject(SessionStore);
   protected readonly day = inject(DayStore);
+  private readonly auth = inject(AuthService);
+  private readonly alerts = inject(AlertController);
+  private readonly router = inject(Router);
 
   protected readonly tiles: Tile[] = [
     { label: 'Route map', icon: 'map-outline', route: '/map', phase: 3 },
@@ -124,4 +128,31 @@ export class DashboardPage {
     { label: 'Retail evacuation', icon: 'receipt-outline', route: '/retail-evacuation', phase: 5 },
     { label: 'Incident', icon: 'alert-circle-outline', route: '/incident', phase: 6 },
   ];
+
+  /**
+   * Confirm then log out. Blocks an accidental logout if the day is active
+   * with a stronger warning — an active day means the agent is mid-route
+   * and signing out would stop background tracking.
+   */
+  async confirmLogout(): Promise<void> {
+    const active = this.day.dayActive();
+    const alert = await this.alerts.create({
+      header: active ? 'End session?' : 'Sign out?',
+      message: active
+        ? 'Your day is still active. Sign out will stop location tracking. End the day first if possible.'
+        : 'You will need to sign in again to continue.',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Sign out',
+          role: 'destructive',
+          handler: async () => {
+            await this.auth.logout();
+            await this.router.navigateByUrl('/login', { replaceUrl: true });
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
 }
