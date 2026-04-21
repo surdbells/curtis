@@ -29,7 +29,8 @@
             ],
             "scripts": [],
             "allowedCommonJsDependencies": [
-              "signature_pad"
+              "signature_pad",
+              "leaflet"
             ]
           },
           "configurations": {

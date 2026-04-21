@@ -66,7 +66,7 @@ export class StorageService {
 }
 
 /**
- * Initial schema. Intentionally minimal in Phase 1 — tables grow in Phase 7.
+ * Initial schema. Intentionally minimal in Phase 1 — tables grow per phase.
  */
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS queued_requests (
@@ -83,4 +83,12 @@ CREATE TABLE IF NOT EXISTS queued_requests (
 
 CREATE INDEX IF NOT EXISTS idx_queued_requests_created_at
   ON queued_requests (created_at);
+
+-- Simple key/value store for cached JSON payloads (truck, route, etc.).
+-- Phase 3 uses this for offline-resilient dashboard rendering.
+CREATE TABLE IF NOT EXISTS reference_cache (
+  cache_key TEXT PRIMARY KEY,
+  payload TEXT NOT NULL,
+  cached_at TEXT NOT NULL
+);
 `;
