@@ -6,6 +6,7 @@ import { LocationService } from './location.service';
 import { TrackerService } from './tracker.service';
 import { DayStore } from '../stores/day.store';
 import { nowIsoUtc } from '../utils';
+import { ACTION, STATUS } from '../models';
 
 export interface StartDayInput {
   truckId: string;
@@ -49,8 +50,8 @@ export class DayService {
   async start(input: StartDayInput): Promise<void> {
     const coords = await this.location.tryGetCurrent();
     const dto = await this.builder.build({
-      action: 'start_day',
-      status: 'ok',
+      action: ACTION.START_DAY,
+      status: STATUS.OK,
       truckid: input.truckId,
       routeid: input.routeId,
       mileage: input.mileage,
@@ -79,8 +80,8 @@ export class DayService {
     const activeRoute = this.dayStore.routeId();
 
     const dto = await this.builder.build({
-      action: 'end_day',
-      status: 'ok',
+      action: ACTION.END_DAY,
+      status: STATUS.OK,
       truckid: activeTruck,
       routeid: activeRoute,
       mileage: input.mileage,

@@ -59,6 +59,14 @@ export const routes: Routes = [
       import('./features/signature/signature.page').then((m) => m.SignaturePage),
   },
   {
+    path: 'delivery-checkout',
+    canActivate: [authGuard, dayStartedGuard],
+    loadComponent: () =>
+      import('./features/delivery-checkout/delivery-checkout.page').then(
+        (m) => m.DeliveryCheckoutPage,
+      ),
+  },
+  {
     path: 'manual-evacuation',
     canActivate: [authGuard, dayStartedGuard],
     loadComponent: () =>
