@@ -1,0 +1,31 @@
+// CurTIS brand theme.
+// Palette:
+//   primary   — #0A4F2A  deep forest green (brand, matches native splash)
+//   secondary — #0D6B39  lighter variant
+//   tertiary  — #C9A227  warm gold accent
+//   success   — #2DD36F  (ionic default)
+//   warning   — #FFC409  (ionic default)
+//   danger    — #EB445A  (ionic default)
+
+:root {
+  --ion-color-primary: #0A4F2A;
+  --ion-color-primary-rgb: 10, 79, 42;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #094625;
+  --ion-color-primary-tint: #23613f;
+
+  --ion-color-secondary: #0D6B39;
+  --ion-color-secondary-rgb: 13, 107, 57;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #0b5e32;
+  --ion-color-secondary-tint: #257a4d;
+
+  --ion-color-tertiary: #C9A227;
+  --ion-color-tertiary-rgb: 201, 162, 39;
+  --ion-color-tertiary-contrast: #000000;
+  --ion-color-tertiary-contrast-rgb: 0, 0, 0;
+  --ion-color-tertiary-shade: #b18f22;
+  --ion-color-tertiary-tint: #ceab3d;
+}

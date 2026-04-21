@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Placeholder branches.xml — replace with the legacy CurTIS XML manifest during Phase 5.
+  Consumed by XmlLoaderService as an offline fallback for the corresponding API endpoint.
+-->
+<root>
+</root>

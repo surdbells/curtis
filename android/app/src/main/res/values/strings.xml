@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CurTIS</string>
+    <string name="title_activity_main">CurTIS</string>
+    <string name="package_name">com.kodek.curtis</string>
+    <string name="custom_url_scheme">com.kodek.curtis</string>
+</resources>
