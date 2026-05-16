@@ -4,6 +4,7 @@ import { ConnectivityService } from './services/connectivity.service';
 import { StorageService } from './services/storage.service';
 import { ThemeService } from './services/theme.service';
 import { BatteryService } from './services/battery.service';
+import { OfflineQueueService } from './services/offline-queue.service';
 
 /**
  * App initializer: runs once at bootstrap, before the first route activates.
@@ -14,6 +15,7 @@ import { BatteryService } from './services/battery.service';
  *   3. SQLite open + schema migration (offline queue needs this)
  *   4. Token hydration (loads persisted session into SessionStore)
  *   5. Battery polling (fires on a 60s interval, exposes signals for UI)
+ *   6. Offline queue worker (drain on reconnect / resume / 60s timer)
  *
  * We swallow errors so a local storage problem on one device doesn't brick
  * the app — the user can still log in fresh.
@@ -24,6 +26,7 @@ export const appInitializerProvider = provideAppInitializer(async () => {
   const storage = inject(StorageService);
   const tokens = inject(TokenService);
   const battery = inject(BatteryService);
+  const queue = inject(OfflineQueueService);
 
   try {
     theme.init();
@@ -58,5 +61,12 @@ export const appInitializerProvider = provideAppInitializer(async () => {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('Battery init failed', err);
+  }
+
+  try {
+    await queue.start();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('Offline queue worker init failed', err);
   }
 });

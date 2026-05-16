@@ -2,8 +2,8 @@
  * A request that failed to reach the server (offline or network error)
  * and has been persisted locally for later replay by offline-queue.service.
  *
- * Populated by offline.interceptor, drained on reconnect.
- * TODO(phase-7): wire up storage and replay logic.
+ * Populated by offline.interceptor, drained by the Phase 7 worker on
+ * reconnect / app-resume / 60s timer.
  */
 export interface QueuedRequest {
   /** Local primary key (auto-increment in SQLite). */
@@ -24,6 +24,14 @@ export interface QueuedRequest {
   /** ISO 8601 UTC timestamp of the last retry attempt. */
   lastAttemptAt?: string;
 
+  /**
+   * ISO 8601 UTC timestamp at which the next retry becomes eligible.
+   * Set by the drain worker after each failed attempt; ahead of this
+   * time the worker skips the row to honour the backoff schedule.
+   * Null/undefined = eligible immediately (newly enqueued rows).
+   */
+  nextAttemptAt?: string;
+
   /** Number of times replay has been attempted. */
   retryCount: number;
 
@@ -35,4 +43,12 @@ export interface QueuedRequest {
    * Generated via uuid v4 at enqueue time and stored until success.
    */
   idempotencyKey: string;
+
+  /**
+   * Row lifecycle status.
+   *   'pending'      — the worker will attempt replay (default)
+   *   'dead_letter'  — exceeded the max retry count; worker ignores it.
+   *                    Surfaced in the Queue page for manual retry/discard.
+   */
+  status?: 'pending' | 'dead_letter';
 }

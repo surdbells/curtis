@@ -50,6 +50,7 @@ export class StorageService {
 
       await this.db.open();
       await this.db.execute(SCHEMA_SQL);
+      await this.migrateQueueColumns();
       this._available.set(true);
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -58,6 +59,32 @@ export class StorageService {
       this.sqlite = null;
       this._available.set(false);
     }
+  }
+
+  /**
+   * Idempotent column adds for the Phase 7 drain worker. SQLite has no
+   * IF NOT EXISTS for ALTER TABLE ADD COLUMN, so we probe the schema and
+   * add only what's missing.
+   */
+  private async migrateQueueColumns(): Promise<void> {
+    if (!this.db) return;
+    const info = await this.db.query('PRAGMA table_info(queued_requests)');
+    const cols = (info.values ?? []).map((r) => String(r['name']));
+    const stmts: string[] = [];
+    if (!cols.includes('next_attempt_at')) {
+      stmts.push("ALTER TABLE queued_requests ADD COLUMN next_attempt_at TEXT");
+    }
+    if (!cols.includes('status')) {
+      // 'pending' (default) | 'dead_letter'
+      stmts.push("ALTER TABLE queued_requests ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'");
+    }
+    for (const sql of stmts) {
+      await this.db.execute(sql);
+    }
+    // Index on (status, next_attempt_at) for fast eligible-row scan.
+    await this.db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_queued_requests_status_next ON queued_requests (status, next_attempt_at)',
+    );
   }
 
   /** Returns the open DB connection or null if SQLite is unavailable. */
