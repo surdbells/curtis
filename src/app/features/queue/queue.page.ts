@@ -32,11 +32,13 @@ import type { QueuedRequest } from '../../core/models';
  *   - Drain now — manually trigger the worker (useful for testing).
  *   - Clear all — delete every row (confirmed via dialog).
  */
+import { CurtisIconComponent } from '../../shared/components/icon';
+
 @Component({
   selector: 'curtis-queue',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule],
+  imports: [CommonModule, IonicModule, CurtisIconComponent],
   styles: [
     `
       :host { display: block; }
@@ -155,7 +157,7 @@ import type { QueuedRequest } from '../../core/models';
         <ion-title>Sync queue</ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="refresh()" [disabled]="loading()">
-            <ion-icon slot="icon-only" name="refresh-outline" />
+            <curtis-icon slot="icon-only" name="refresh-outline" />
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -169,12 +171,12 @@ import type { QueuedRequest } from '../../core/models';
       <div class="summary">
         <div class="summary-counts">
           <span class="count-pill pending">
-            <ion-icon name="cloud-upload-outline" />
+            <curtis-icon name="cloud-upload-outline" />
             {{ queue.pendingCount() }} pending
           </span>
           @if (queue.deadLetterCount() > 0) {
             <span class="count-pill dead">
-              <ion-icon name="alert-circle-outline" />
+              <curtis-icon name="alert-circle-outline" />
               {{ queue.deadLetterCount() }} failed
             </span>
           }
@@ -188,7 +190,7 @@ import type { QueuedRequest } from '../../core/models';
             <ion-spinner slot="start" name="crescent" />
             Draining…
           } @else {
-            <ion-icon slot="start" name="play-outline" />
+            <curtis-icon slot="start" name="play-outline" />
             Drain now
           }
         </ion-button>
@@ -203,7 +205,7 @@ import type { QueuedRequest } from '../../core/models';
 
       @if (!connectivity.online()) {
         <div class="drain-strip" style="background: color-mix(in srgb, var(--ion-color-warning) 18%, transparent); color: var(--ion-color-warning-shade); border-color: color-mix(in srgb, var(--ion-color-warning) 40%, transparent);">
-          <ion-icon name="cloud-offline-outline" />
+          <curtis-icon name="cloud-offline-outline" />
           Offline — queue will drain when connection returns.
         </div>
       }
@@ -215,7 +217,7 @@ import type { QueuedRequest } from '../../core/models';
         </div>
       } @else if (total() === 0) {
         <div class="empty">
-          <ion-icon name="checkmark-done-circle-outline" />
+          <curtis-icon name="checkmark-done-circle-outline" />
           <h3 style="margin-top: 0.75rem;">All synced</h3>
           <p>No queued requests waiting for delivery.</p>
         </div>
@@ -240,16 +242,16 @@ import type { QueuedRequest } from '../../core/models';
                 </div>
                 @if (r.lastError) {
                   <div class="error">
-                    <ion-icon name="warning-outline" /> {{ r.lastError }}
+                    <curtis-icon name="warning-outline" /> {{ r.lastError }}
                   </div>
                 }
               </div>
               <div class="actions">
                 <ion-button fill="outline" (click)="retry(r)">
-                  <ion-icon slot="icon-only" name="reload-outline" />
+                  <curtis-icon slot="icon-only" name="reload-outline" />
                 </ion-button>
                 <ion-button fill="outline" color="danger" (click)="confirmDiscard(r)">
-                  <ion-icon slot="icon-only" name="trash-outline" />
+                  <curtis-icon slot="icon-only" name="trash-outline" />
                 </ion-button>
               </div>
             </div>
@@ -271,16 +273,16 @@ import type { QueuedRequest } from '../../core/models';
                 </div>
                 @if (r.lastError) {
                   <div class="error">
-                    <ion-icon name="warning-outline" /> {{ r.lastError }}
+                    <curtis-icon name="warning-outline" /> {{ r.lastError }}
                   </div>
                 }
               </div>
               <div class="actions">
                 <ion-button fill="solid" color="primary" (click)="retry(r)">
-                  <ion-icon slot="icon-only" name="reload-outline" />
+                  <curtis-icon slot="icon-only" name="reload-outline" />
                 </ion-button>
                 <ion-button fill="outline" color="danger" (click)="confirmDiscard(r)">
-                  <ion-icon slot="icon-only" name="trash-outline" />
+                  <curtis-icon slot="icon-only" name="trash-outline" />
                 </ion-button>
               </div>
             </div>
@@ -289,7 +291,7 @@ import type { QueuedRequest } from '../../core/models';
 
         <div style="padding: 1rem; display: flex; justify-content: center;">
           <ion-button fill="clear" color="danger" (click)="confirmClearAll()">
-            <ion-icon slot="start" name="trash-bin-outline" />
+            <curtis-icon slot="start" name="trash-bin-outline" />
             Clear all
           </ion-button>
         </div>

@@ -40,7 +40,7 @@
             "production": {
               "budgets": [
                 { "type": "initial", "maximumWarning": "2mb", "maximumError": "8mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "6kb", "maximumError": "12kb" }
+                { "type": "anyComponentStyle", "maximumWarning": "10kb", "maximumError": "16kb" }
               ],
               "fileReplacements": [
                 { "replace": "src/environments/environment.ts", "with": "src/environments/environment.prod.ts" }
@@ -50,7 +50,7 @@
             "staging": {
               "budgets": [
                 { "type": "initial", "maximumWarning": "2mb", "maximumError": "8mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "6kb", "maximumError": "12kb" }
+                { "type": "anyComponentStyle", "maximumWarning": "10kb", "maximumError": "16kb" }
               ],
               "fileReplacements": [
                 { "replace": "src/environments/environment.ts", "with": "src/environments/environment.staging.ts" }

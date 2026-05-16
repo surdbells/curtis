@@ -8,13 +8,14 @@ import { Capacitor } from '@capacitor/core';
 import { RouteStore } from '../../core/stores/route.store';
 import { DeliveryStore } from '../../core/stores/delivery.store';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 import type { RouteStop } from '../../core/models';
 
 @Component({
   selector: 'curtis-daily',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, OfflineBannerComponent],
+  imports: [CommonModule, IonicModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
       :host { display: block; }
@@ -90,7 +91,7 @@ import type { RouteStop } from '../../core/models';
 
       @if (stops().length === 0) {
         <div class="empty">
-          <ion-icon name="list-outline" />
+          <curtis-icon name="list-outline" />
           <h3 style="margin-top: 0.75rem;">No stops yet</h3>
           <p>Return to the dashboard and pull to refresh.</p>
         </div>
@@ -112,7 +113,7 @@ import type { RouteStop } from '../../core/models';
               @if (stop.status) {
                 <span class="pill">{{ stop.status }}</span>
               }
-              <ion-icon class="chevron" name="chevron-forward-outline" />
+              <curtis-icon class="chevron" name="chevron-forward-outline" />
             </a>
           }
         </div>

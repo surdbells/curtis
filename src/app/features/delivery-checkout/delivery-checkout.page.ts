@@ -7,6 +7,7 @@ import { IonicModule, ToastController } from '@ionic/angular';
 import { DeliveryStore } from '../../core/stores/delivery.store';
 import { DeliveryService } from '../../core/services/delivery.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 
 /**
  * Check-Out — Phase 4, final step of the delivery chain.
@@ -25,7 +26,7 @@ import { OfflineBannerComponent } from '../../shared/components/offline-banner/o
   selector: 'curtis-delivery-checkout',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent],
+  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
       .summary {
@@ -73,7 +74,7 @@ import { OfflineBannerComponent } from '../../shared/components/offline-banner/o
 
       @if (!deliveryStore.canCheckOut()) {
         <div class="warning">
-          <ion-icon name="warning-outline" />
+          <curtis-icon name="warning-outline" />
           @if (!deliveryStore.isCheckedIn()) {
             Not checked in. Complete check-in first.
           } @else if (!deliveryStore.hasSignature()) {

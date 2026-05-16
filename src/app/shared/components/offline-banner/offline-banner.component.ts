@@ -18,11 +18,13 @@ import { OfflineQueueService } from '../../../core/services/offline-queue.servic
  * The component is fixed top-right via CSS so it never occludes content
  * even on dense pages.
  */
+import { CurtisIconComponent } from '../icon';
+
 @Component({
   selector: 'curtis-offline-banner',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule],
+  imports: [CommonModule, IonicModule, CurtisIconComponent],
   styles: [
     `
       :host {
@@ -76,21 +78,21 @@ import { OfflineQueueService } from '../../../core/services/offline-queue.servic
     @if (state() === 'offline') {
       <div class="pill-wrap">
         <button type="button" class="pill" (click)="open()">
-          <ion-icon name="cloud-offline-outline" />
+          <curtis-icon name="cloud-offline-outline" />
           <span>Offline</span>
         </button>
       </div>
     } @else if (state() === 'failed') {
       <div class="pill-wrap">
         <button type="button" class="pill failed" (click)="open()">
-          <ion-icon name="alert-circle" />
+          <curtis-icon name="alert-circle" />
           <span>{{ queue.deadLetterCount() }} failed</span>
         </button>
       </div>
     } @else if (state() === 'pending') {
       <div class="pill-wrap">
         <button type="button" class="pill pending" (click)="open()">
-          <ion-icon name="cloud-upload-outline" />
+          <curtis-icon name="cloud-upload-outline" />
           <span>{{ queue.pendingCount() }} syncing</span>
         </button>
       </div>

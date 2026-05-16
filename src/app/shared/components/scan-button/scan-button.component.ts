@@ -5,14 +5,16 @@ import { IonicModule } from '@ionic/angular';
  * Prominent "Scan seal" button used across seal flows. Emits (scan) when
  * tapped; the host page wires this to ScannerService and handles the result.
  */
+import { CurtisIconComponent } from '../icon';
+
 @Component({
   selector: 'curtis-scan-button',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonicModule],
+  imports: [IonicModule, CurtisIconComponent],
   template: `
     <ion-button expand="block" size="large" [disabled]="disabled" (click)="scan.emit()">
-      <ion-icon slot="start" name="qr-code-outline" />
+      <curtis-icon slot="start" name="qr-code-outline" />
       {{ label }}
     </ion-button>
   `,

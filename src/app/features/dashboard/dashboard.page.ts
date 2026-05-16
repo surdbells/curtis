@@ -29,6 +29,7 @@ import { ConnectivityService } from '../../core/services/connectivity.service';
 import { BatteryService } from '../../core/services/battery.service';
 import { TrackerService } from '../../core/services/tracker.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 import type { Truck, Route } from '../../core/models';
 
 interface Tile {
@@ -36,358 +37,510 @@ interface Tile {
   icon: string;
   route: string;
   requiresDay: boolean;
-  /** Group for visual styling. */
   tone?: 'primary' | 'tertiary' | 'success' | 'danger';
 }
 
 const CACHE_KEY_TRUCK = 'phase3.truck';
 const CACHE_KEY_ROUTE = 'phase3.route';
 
+/**
+ * Dashboard — Phase 9 premium redesign.
+ *
+ * Layout (top-down):
+ *   1. Slim header — greeting + settings cog
+ *   2. Hero card — day status, route name, truck plate; primary action
+ *      button (Start Day / End Day) anchored bottom-right of the hero
+ *   3. Stat strip — battery, connectivity, tracker status (3 mini cards)
+ *   4. Tile grid — operations actions (2 cols × 5 rows), the third
+ *      Tier (tertiary tone) being evacuation, the Tier with danger
+ *      tone being incident reporting
+ *   5. Floating SOS FAB at bottom-right (pre-shift visible too)
+ *
+ * Behavior preserved from Phase 8:
+ *   - hydrate from cache, refresh from API
+ *   - Start/End Day prompts with mileage + gas
+ *   - back-button minimises while day active, logout confirm otherwise
+ *   - SOS routes to incident page with sos=1 flag after confirm
+ */
 @Component({
   selector: 'curtis-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, RouterLink, OfflineBannerComponent],
+  imports: [CommonModule, IonicModule, RouterLink, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
       :host { display: block; }
       ion-content { --background: var(--curtis-bg); }
 
-      /* Day banner */
-      .banner {
-        margin: 0.75rem 0.75rem 0;
-        padding: 1rem 1.1rem;
-        border-radius: var(--curtis-radius-lg);
-        background: var(--curtis-gradient-primary);
+      /* --- Header --- */
+      ion-header.curtis-header ion-toolbar {
+        --background: var(--curtis-bg);
+        --border-color: transparent;
+        --border-width: 0;
+        padding-top: env(safe-area-inset-top, 0);
+      }
+      .greeting {
+        display: flex; flex-direction: column;
+        padding-left: var(--curtis-space-2);
+      }
+      .greeting__label {
+        font-size: var(--curtis-text-xs);
+        color: var(--curtis-text-subtle);
+        letter-spacing: var(--curtis-tracking-wide);
+        text-transform: uppercase;
+        font-weight: var(--curtis-weight-semibold);
+      }
+      .greeting__name {
+        font-size: var(--curtis-text-md);
+        font-weight: var(--curtis-weight-bold);
+        color: var(--curtis-text);
+      }
+
+      .icon-button {
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-pill);
+        width: 40px; height: 40px;
+        display: grid; place-items: center;
+        color: var(--curtis-text);
+        cursor: pointer;
+        transition: background var(--curtis-duration-fast) var(--curtis-ease-out);
+      }
+      .icon-button:hover { background: var(--curtis-surface-2); }
+
+      /* --- Hero card (day status) --- */
+      .hero {
+        position: relative;
+        margin: 0 var(--curtis-space-4);
+        padding: var(--curtis-space-5);
+        border-radius: var(--curtis-radius-xl);
+        background: var(--curtis-gradient-hero);
         color: var(--curtis-text-inverse);
         box-shadow: var(--curtis-shadow-md);
-        position: relative;
         overflow: hidden;
+        animation: rise var(--curtis-duration-slow) var(--curtis-ease-out) both;
       }
-      .banner::after {
+      .hero::after {
         content: '';
         position: absolute; inset: 0;
-        background: radial-gradient(120% 80% at 90% 0%, rgba(255,255,255,0.16), transparent 60%);
+        background:
+          radial-gradient(80% 60% at 100% 0%, rgba(255, 255, 255, 0.12), transparent 60%),
+          radial-gradient(60% 50% at 0% 100%, rgba(201, 162, 39, 0.16), transparent 70%);
         pointer-events: none;
       }
-      .banner-row {
-        display: flex; align-items: center; justify-content: space-between;
-        gap: 0.75rem; position: relative; z-index: 1;
-      }
-      .banner-status { display: flex; flex-direction: column; gap: 0.1rem; }
-      .banner-label {
-        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em;
-        text-transform: uppercase; opacity: 0.78;
-      }
-      .banner-title { font-size: 1.15rem; font-weight: 700; }
-      .banner-meta { font-size: 0.78rem; opacity: 0.85; }
-      .banner ion-button { --border-radius: var(--curtis-radius-pill); font-weight: 600; }
+      .hero > * { position: relative; z-index: 1; }
 
-      .pulse {
-        display: inline-flex; align-items: center; gap: 0.4rem;
-        font-size: 0.72rem; opacity: 0.9;
+      .hero__status {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--curtis-space-1_5);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-semibold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        background: rgba(255, 255, 255, 0.14);
+        padding: 5px var(--curtis-space-2_5);
+        border-radius: var(--curtis-radius-pill);
+        border: 1px solid rgba(255, 255, 255, 0.20);
       }
-      .pulse-dot {
-        width: 8px; height: 8px; border-radius: 50%;
-        background: var(--ion-color-tertiary);
-        box-shadow: 0 0 0 0 currentColor;
-        animation: dot 1.8s ease-out infinite;
+      .hero__status .dot {
+        width: 6px; height: 6px; border-radius: var(--curtis-radius-pill);
+        background: var(--gold-300);
       }
-      .battery-warn {
-        display: inline-flex; align-items: center; gap: 0.3rem;
-        font-size: 0.7rem; font-weight: 600;
-        margin-top: 0.3rem;
-        padding: 0.15rem 0.55rem;
-        border-radius: 999px;
-        background: rgba(251, 191, 36, 0.2);
-        color: #FBBF24;
-        align-self: flex-start;
+      .hero__status.active .dot { background: #34D399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.7); }
+
+      .hero__title {
+        margin-top: var(--curtis-space-3);
+        font-size: var(--curtis-text-2xl);
+        font-weight: var(--curtis-weight-extrabold);
+        letter-spacing: var(--curtis-tracking-tight);
+        line-height: var(--curtis-leading-tight);
       }
-      .battery-warn.critical {
-        background: rgba(248, 113, 113, 0.22);
-        color: #F87171;
-      }
-      .battery-warn ion-icon { font-size: 0.85rem; }
-      @keyframes dot {
-        0%   { box-shadow: 0 0 0 0 rgba(229, 192, 74, 0.6); }
-        100% { box-shadow: 0 0 0 9px rgba(229, 192, 74, 0); }
+      .hero__sub {
+        margin-top: var(--curtis-space-1);
+        font-size: var(--curtis-text-sm);
+        color: rgba(255, 255, 255, 0.78);
       }
 
-      /* Summary card */
-      .summary {
-        margin: 0.75rem;
-        padding: 0.5rem 0;
+      .hero__details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--curtis-space-4);
+        margin-top: var(--curtis-space-5);
+        padding-top: var(--curtis-space-4);
+        border-top: 1px solid rgba(255, 255, 255, 0.16);
+      }
+      .hero__detail {
+        display: flex; flex-direction: column;
+        gap: var(--curtis-space-0_5);
+      }
+      .hero__detail-label {
+        font-size: 10px;
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.60);
+        font-weight: var(--curtis-weight-semibold);
+      }
+      .hero__detail-value {
+        font-size: var(--curtis-text-md);
+        font-weight: var(--curtis-weight-bold);
+        color: var(--curtis-text-inverse);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .hero__cta {
+        margin-top: var(--curtis-space-5);
+      }
+      .hero__cta ion-button {
+        --background: var(--gold-500);
+        --background-hover: var(--gold-600);
+        --color: #1A1A1A;
+        --box-shadow: 0 8px 24px rgba(201, 162, 39, 0.35);
+        font-weight: var(--curtis-weight-bold);
+      }
+      .hero__cta ion-button.end-day {
+        --background: rgba(255, 255, 255, 0.14);
+        --background-hover: rgba(255, 255, 255, 0.22);
+        --color: var(--curtis-text-inverse);
+        --box-shadow: none;
+        border: 1px solid rgba(255, 255, 255, 0.20);
+        border-radius: var(--curtis-radius-md);
+      }
+
+      /* --- Stat strip --- */
+      .stat-strip {
+        margin: var(--curtis-space-4);
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--curtis-space-3);
+        animation: rise var(--curtis-duration-slow) var(--curtis-ease-out) 60ms both;
+      }
+      .stat-card {
         background: var(--curtis-surface-1);
         border: 1px solid var(--curtis-border);
-        border-radius: var(--curtis-radius-md);
-        box-shadow: var(--curtis-shadow-sm);
+        border-radius: var(--curtis-radius-lg);
+        padding: var(--curtis-space-3);
+        display: flex; flex-direction: column;
+        gap: var(--curtis-space-1);
+        box-shadow: var(--curtis-shadow-xs);
       }
-      .summary .row {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 0.65rem 1rem;
-        border-bottom: 1px solid var(--curtis-border);
-      }
-      .summary .row:last-child { border-bottom: none; }
-      .summary .label {
+      .stat-card__head {
+        display: flex; align-items: center; gap: var(--curtis-space-1_5);
+        font-size: 10px;
+        font-weight: var(--curtis-weight-semibold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
         color: var(--curtis-text-subtle);
-        font-size: 0.78rem;
       }
-      .summary .value {
-        font-weight: 600;
+      .stat-card__head curtis-icon { color: var(--curtis-text-muted); }
+      .stat-card__value {
+        font-size: var(--curtis-text-md);
+        font-weight: var(--curtis-weight-bold);
+        font-variant-numeric: tabular-nums;
         color: var(--curtis-text);
       }
+      .stat-card__value.ok { color: var(--green-600); }
+      .stat-card__value.warn { color: var(--amber-500); }
+      .stat-card__value.bad { color: var(--red-500); }
 
-      /* Tile grid */
+      /* --- Tile grid --- */
+      .grid-label {
+        margin: var(--curtis-space-2) var(--curtis-space-4) var(--curtis-space-1);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        color: var(--curtis-text-subtle);
+      }
       .grid {
+        margin: 0 var(--curtis-space-4) calc(var(--curtis-space-12) + env(safe-area-inset-bottom, 0));
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 0.65rem;
-        padding: 0.5rem 0.75rem 1.25rem;
+        gap: var(--curtis-space-3);
       }
+      @media (min-width: 600px) {
+        .grid { grid-template-columns: repeat(3, 1fr); }
+      }
+      @media (min-width: 900px) {
+        .grid { grid-template-columns: repeat(4, 1fr); }
+      }
+
       .tile {
-        display: flex; flex-direction: column;
-        align-items: flex-start; justify-content: space-between;
-        gap: 0.7rem;
-        padding: 1rem 1rem 0.9rem;
-        min-height: 118px;
-        border-radius: var(--curtis-radius-lg);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--curtis-space-3);
+        padding: var(--curtis-space-4);
         background: var(--curtis-surface-1);
         border: 1px solid var(--curtis-border);
-        box-shadow: var(--curtis-shadow-sm);
-        color: var(--curtis-text);
-        text-decoration: none;
-        transition: transform 120ms ease-out, box-shadow 120ms ease-out;
-        position: relative;
-        overflow: hidden;
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+        text-align: left;
+        cursor: pointer;
+        transition: transform var(--curtis-duration-fast) var(--curtis-ease-out),
+                    box-shadow var(--curtis-duration-fast) var(--curtis-ease-out),
+                    border-color var(--curtis-duration-fast) var(--curtis-ease-out);
+        animation: rise var(--curtis-duration-slow) var(--curtis-ease-out) both;
       }
-      .tile:active { transform: scale(0.98); box-shadow: var(--curtis-shadow-sm); }
+      .tile:hover:not(.disabled) {
+        border-color: var(--curtis-border-strong);
+        box-shadow: var(--curtis-shadow-md);
+        transform: translateY(-2px);
+      }
+      .tile:active:not(.disabled) {
+        transform: translateY(0);
+        box-shadow: var(--curtis-shadow-xs);
+      }
       .tile.disabled {
-        opacity: 0.55;
-        pointer-events: none;
+        cursor: not-allowed;
+        opacity: 0.5;
       }
-
-      .tile .icon-wrap {
-        width: 38px; height: 38px;
-        border-radius: 10px;
+      .tile__icon {
+        width: 44px; height: 44px;
+        border-radius: var(--curtis-radius-md);
         display: grid; place-items: center;
-        background: color-mix(in srgb, var(--ion-color-primary) 12%, transparent);
-      }
-      .tile.tone-tertiary .icon-wrap {
-        background: color-mix(in srgb, var(--ion-color-tertiary) 18%, transparent);
-      }
-      .tile.tone-danger .icon-wrap {
-        background: color-mix(in srgb, var(--ion-color-danger) 14%, transparent);
-      }
-      .tile .icon-wrap ion-icon {
-        font-size: 1.25rem;
+        background: color-mix(in srgb, var(--ion-color-primary) 10%, transparent);
         color: var(--ion-color-primary);
       }
-      .tile.tone-tertiary .icon-wrap ion-icon { color: var(--ion-color-tertiary); }
-      .tile.tone-danger .icon-wrap ion-icon  { color: var(--ion-color-danger); }
-
-      .tile .label { font-weight: 600; line-height: 1.25; }
-      .tile .meta {
-        font-size: 0.7rem;
-        color: var(--curtis-text-subtle);
+      .tile.tone-tertiary .tile__icon {
+        background: color-mix(in srgb, var(--ion-color-tertiary) 18%, transparent);
+        color: var(--gold-700);
       }
-      .tile.disabled .meta {
-        color: var(--ion-color-warning-shade);
+      .tile.tone-danger .tile__icon {
+        background: color-mix(in srgb, var(--ion-color-danger) 12%, transparent);
+        color: var(--red-500);
       }
-
-      /* Warning card */
-      .warning {
-        margin: 0.75rem;
-        padding: 0.85rem 1rem;
-        border-radius: var(--curtis-radius-md);
-        background: color-mix(in srgb, var(--ion-color-warning) 12%, var(--curtis-surface-1));
-        border: 1px solid color-mix(in srgb, var(--ion-color-warning) 40%, transparent);
+      .tile__label {
+        font-size: var(--curtis-text-base);
+        font-weight: var(--curtis-weight-semibold);
         color: var(--curtis-text);
-        font-size: 0.85rem;
-        display: flex; align-items: center; gap: 0.55rem;
+        line-height: var(--curtis-leading-snug);
       }
-      .warning ion-icon {
-        color: var(--ion-color-warning);
-        font-size: 1.1rem;
-        flex-shrink: 0;
-      }
-
-      .skeleton-stage {
-        padding: 2rem 1rem; text-align: center;
+      .tile__hint {
+        font-size: var(--curtis-text-xs);
         color: var(--curtis-text-subtle);
+        margin-top: -0.25rem;
+      }
+      .tile__chev {
+        position: absolute;
+        top: var(--curtis-space-3);
+        right: var(--curtis-space-3);
+        color: var(--curtis-text-faint);
+      }
+      .tile.disabled .tile__chev { opacity: 0.4; }
+
+      /* --- SOS FAB --- */
+      .sos {
+        position: fixed;
+        right: var(--curtis-space-5);
+        bottom: calc(var(--curtis-space-6) + env(safe-area-inset-bottom, 0));
+        z-index: 100;
+      }
+      .sos__btn {
+        width: 56px; height: 56px;
+        border-radius: var(--curtis-radius-pill);
+        background: var(--red-500);
+        color: white;
+        display: grid; place-items: center;
+        box-shadow: 0 8px 24px rgba(239, 68, 68, 0.45),
+                    0 0 0 4px rgba(239, 68, 68, 0.18);
+        border: none;
+        cursor: pointer;
+        transition: transform var(--curtis-duration-fast) var(--curtis-ease-out);
+        animation: sos-pulse 2.2s var(--curtis-ease-in-out) infinite;
+      }
+      .sos__btn:active { transform: scale(0.94); }
+
+      @keyframes sos-pulse {
+        0%, 100% { box-shadow: 0 8px 24px rgba(239, 68, 68, 0.45), 0 0 0 4px rgba(239, 68, 68, 0.18); }
+        50%      { box-shadow: 0 8px 24px rgba(239, 68, 68, 0.55), 0 0 0 12px rgba(239, 68, 68, 0); }
+      }
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
       }
 
-      /* SOS — floating action button, bottom-right, always visible */
-      .sos-fab {
-        position: fixed;
-        right: 1rem;
-        bottom: 1rem;
-        width: 64px; height: 64px;
-        border-radius: 50%;
-        background: var(--ion-color-danger);
-        color: var(--ion-color-danger-contrast);
-        display: grid; place-items: center;
-        text-decoration: none;
-        font-weight: 800; font-size: 0.85rem;
-        letter-spacing: 0.05em;
-        box-shadow:
-          0 8px 24px rgba(220, 38, 38, 0.45),
-          0 0 0 0 rgba(220, 38, 38, 0.4);
-        z-index: 20;
-        animation: sos-pulse 2.2s ease-out infinite;
-        transition: transform 120ms ease-out;
-      }
-      .sos-fab:active { transform: scale(0.94); }
-      .sos-fab ion-icon { font-size: 1.6rem; }
-      @keyframes sos-pulse {
-        0%   { box-shadow: 0 8px 24px rgba(220, 38, 38, 0.45), 0 0 0 0   rgba(220, 38, 38, 0.45); }
-        70%  { box-shadow: 0 8px 24px rgba(220, 38, 38, 0.45), 0 0 0 14px rgba(220, 38, 38, 0);    }
-        100% { box-shadow: 0 8px 24px rgba(220, 38, 38, 0.45), 0 0 0 0   rgba(220, 38, 38, 0);    }
-      }
+      /* Stagger tile entrance */
+      .tile:nth-child(1) { animation-delay: 80ms; }
+      .tile:nth-child(2) { animation-delay: 120ms; }
+      .tile:nth-child(3) { animation-delay: 160ms; }
+      .tile:nth-child(4) { animation-delay: 200ms; }
+      .tile:nth-child(5) { animation-delay: 240ms; }
+      .tile:nth-child(6) { animation-delay: 280ms; }
+      .tile:nth-child(7) { animation-delay: 320ms; }
+      .tile:nth-child(8) { animation-delay: 360ms; }
+      .tile:nth-child(9) { animation-delay: 400ms; }
+      .tile:nth-child(10) { animation-delay: 440ms; }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header class="curtis-header" [translucent]="false">
       <ion-toolbar>
-        <ion-title>Dashboard</ion-title>
+        <div slot="start" class="greeting">
+          <span class="greeting__label">CurTIS</span>
+          <span class="greeting__name">{{ greeting() }}</span>
+        </div>
         <ion-buttons slot="end">
-          <ion-button [routerLink]="['/settings']">
-            <ion-icon slot="icon-only" name="settings-outline" />
-          </ion-button>
+          <button class="icon-button" [routerLink]="['/settings']" aria-label="Settings">
+            <curtis-icon name="settings-outline" size="sm" />
+          </button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content [fullscreen]="true">
       <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">
         <ion-refresher-content />
       </ion-refresher>
 
+      <!-- Connectivity / sync banner -->
       <curtis-offline-banner />
 
-      <!-- Day banner -->
-      <div class="banner">
-        <div class="banner-row">
-          <div class="banner-status">
-            <span class="banner-label">
-              {{ day.dayActive() ? 'Active shift' : 'Awaiting start' }}
-            </span>
-            <span class="banner-title">
-              {{ day.dayActive() ? 'Day in progress' : 'Day not started' }}
-            </span>
-            @if (session.user(); as u) {
-              <span class="banner-meta">{{ u.email }}</span>
-            }
-            @if (day.dayActive()) {
-              <span class="pulse">
-                <span class="pulse-dot"></span>
-                Tracking · {{ tracker.pingCount() }} pings
-              </span>
-            }
-            @if (battery.isLow() || battery.isCritical()) {
-              <span class="battery-warn" [class.critical]="battery.isCritical()">
-                <ion-icon name="battery-half-outline" />
-                @if (battery.isCritical()) {
-                  Battery critical{{ battery.level() !== null ? ' · ' + battery.level() + '%' : '' }}
-                } @else {
-                  Low battery{{ battery.level() !== null ? ' · ' + battery.level() + '%' : '' }}
-                }
-              </span>
-            }
+      <!-- HERO: day status + primary CTA -->
+      <section class="hero">
+        <div class="hero__status" [class.active]="day.dayActive()">
+          <span class="dot"></span>
+          {{ day.dayActive() ? 'On shift' : 'Ready to start' }}
+        </div>
+
+        <h1 class="hero__title">
+          {{ routeStore.route()?.name || 'No route assigned' }}
+        </h1>
+        <div class="hero__sub">
+          {{ day.dayActive() ? 'Tracking is live' : 'Tap Start day to begin' }}
+        </div>
+
+        <div class="hero__details">
+          <div class="hero__detail">
+            <span class="hero__detail-label">Truck</span>
+            <span class="hero__detail-value">{{ truck.truck()?.plate || '—' }}</span>
           </div>
-          <ion-button
-            [color]="day.dayActive() ? 'danger' : 'tertiary'"
-            size="default"
-            [disabled]="dayActionWorking() || (!day.dayActive() && !canStartDay())"
-            (click)="day.dayActive() ? promptEndDay() : promptStartDay()"
+          <div class="hero__detail">
+            <span class="hero__detail-label">Stops</span>
+            <span class="hero__detail-value">{{ routeStore.stops().length || '—' }}</span>
+          </div>
+        </div>
+
+        <div class="hero__cta">
+          @if (!day.dayActive()) {
+            <ion-button
+              expand="block"
+              size="default"
+              [disabled]="!canStartDay() || dayActionWorking()"
+              (click)="promptStartDay()"
+            >
+              @if (dayActionWorking()) {
+                <ion-spinner slot="start" name="crescent" />
+                Starting…
+              } @else {
+                <curtis-icon slot="start" name="play-outline" size="sm" />
+                Start day
+              }
+            </ion-button>
+          } @else {
+            <ion-button
+              class="end-day"
+              expand="block"
+              size="default"
+              [disabled]="dayActionWorking()"
+              (click)="promptEndDay()"
+            >
+              @if (dayActionWorking()) {
+                <ion-spinner slot="start" name="crescent" />
+                Ending…
+              } @else {
+                <curtis-icon slot="start" name="power-outline" size="sm" />
+                End day
+              }
+            </ion-button>
+          }
+        </div>
+      </section>
+
+      <!-- STAT STRIP -->
+      <section class="stat-strip">
+        <div class="stat-card">
+          <div class="stat-card__head">
+            <curtis-icon name="battery-half-outline" size="xs" />
+            Battery
+          </div>
+          <div
+            class="stat-card__value"
+            [class.warn]="(battery.level() ?? 100) < 30"
+            [class.bad]="(battery.level() ?? 100) < 15"
           >
-            @if (dayActionWorking()) {
-              <ion-spinner slot="start" name="crescent" />
-            } @else {
-              <ion-icon
-                slot="start"
-                [name]="day.dayActive() ? 'stop-circle-outline' : 'play-circle-outline'"
-              />
-            }
-            {{ day.dayActive() ? 'End day' : 'Start day' }}
-          </ion-button>
-        </div>
-      </div>
-
-      @if (!loading() && !truck.truck()) {
-        <div class="warning">
-          <ion-icon name="warning-outline" />
-          No truck assigned. Contact operations to continue.
-        </div>
-      }
-
-      @if (loading() && !truck.truck()) {
-        <div class="skeleton-stage">
-          <ion-spinner name="crescent" />
-          <div style="margin-top: 0.4rem;">Loading assignment…</div>
-        </div>
-      }
-
-      @if (truck.truck(); as t) {
-        <div class="summary">
-          <div class="row">
-            <span class="label">Truck</span>
-            <span class="value">{{ t.plate || t.id || '—' }}</span>
+            {{ battery.level() != null ? (battery.level() + '%') : '—' }}
           </div>
-          @if (t.model) {
-            <div class="row">
-              <span class="label">Model</span>
-              <span class="value">{{ t.model }}</span>
-            </div>
-          }
-          @if (t.mileage !== undefined && t.mileage !== null) {
-            <div class="row">
-              <span class="label">Last mileage</span>
-              <span class="value">{{ t.mileage }}</span>
-            </div>
-          }
-          @if (routeStore.route(); as r) {
-            <div class="row">
-              <span class="label">Route</span>
-              <span class="value">{{ r.name || r.id || '—' }}</span>
-            </div>
-            <div class="row">
-              <span class="label">Stops</span>
-              <span class="value">{{ routeStore.stops().length }}</span>
-            </div>
-          }
         </div>
-      }
+        <div class="stat-card">
+          <div class="stat-card__head">
+            <curtis-icon name="cloud-offline-outline" size="xs" />
+            Network
+          </div>
+          <div
+            class="stat-card__value"
+            [class.ok]="connectivity.online()"
+            [class.bad]="!connectivity.online()"
+          >
+            {{ connectivity.online() ? 'Online' : 'Offline' }}
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__head">
+            <curtis-icon name="navigate-circle-outline" size="xs" />
+            Tracking
+          </div>
+          <div
+            class="stat-card__value"
+            [class.ok]="tracker.running()"
+            [class.warn]="!tracker.running()"
+          >
+            {{ tracker.running() ? 'Live' : 'Idle' }}
+          </div>
+        </div>
+      </section>
 
-      <div class="grid">
+      <!-- TILES -->
+      <div class="grid-label">Quick actions</div>
+      <section class="grid">
         @for (t of tiles; track t.route) {
           @if (t.requiresDay && !day.dayActive()) {
-            <div class="tile disabled" [class.tone-tertiary]="t.tone === 'tertiary'" [class.tone-danger]="t.tone === 'danger'">
-              <div class="icon-wrap"><ion-icon [name]="t.icon" /></div>
-              <div>
-                <div class="label">{{ t.label }}</div>
-                <div class="meta">Start day first</div>
+            <div
+              class="tile disabled"
+              [class.tone-tertiary]="t.tone === 'tertiary'"
+              [class.tone-danger]="t.tone === 'danger'"
+            >
+              <div class="tile__icon">
+                <curtis-icon [name]="t.icon" size="md" />
               </div>
+              <div class="tile__label">{{ t.label }}</div>
+              <div class="tile__hint">Start day to unlock</div>
+              <curtis-icon class="tile__chev" name="chevron-forward-outline" size="xs" />
             </div>
           } @else {
-            <a class="tile" [routerLink]="t.route" [class.tone-tertiary]="t.tone === 'tertiary'" [class.tone-danger]="t.tone === 'danger'">
-              <div class="icon-wrap"><ion-icon [name]="t.icon" /></div>
-              <div>
-                <div class="label">{{ t.label }}</div>
-                <div class="meta">Tap to open</div>
+            <a
+              class="tile"
+              [class.tone-tertiary]="t.tone === 'tertiary'"
+              [class.tone-danger]="t.tone === 'danger'"
+              [routerLink]="[t.route]"
+            >
+              <div class="tile__icon">
+                <curtis-icon [name]="t.icon" size="md" />
               </div>
+              <div class="tile__label">{{ t.label }}</div>
+              <curtis-icon class="tile__chev" name="chevron-forward-outline" size="xs" />
             </a>
           }
         }
-      </div>
+      </section>
 
-      <!-- SOS — always visible, floats above tile grid. Tapping prompts a
-           confirmation, then routes to /incident?sos=1 which pre-fills the
-           form with high-urgency defaults. The photo capture step on the
-           Incident page acts as a deliberate confirm-by-action gate so a
-           pocket-tap can't actually submit a Robbery alert. -->
-      <a class="sos-fab" (click)="onSos($event)">
-        <ion-icon name="warning-outline" />
-      </a>
+      <!-- SOS FAB — always visible, even pre-shift -->
+      <div class="sos">
+        <button class="sos__btn" (click)="onSos($event)" aria-label="Send SOS">
+          <curtis-icon name="warning-outline" size="lg" />
+        </button>
+      </div>
     </ion-content>
   `,
 })
@@ -398,12 +551,12 @@ export class DashboardPage implements OnInit, OnDestroy {
   protected readonly routeStore = inject(RouteStore);
   protected readonly battery = inject(BatteryService);
   protected readonly tracker = inject(TrackerService);
+  protected readonly connectivity = inject(ConnectivityService);
   private readonly auth = inject(AuthService);
   private readonly trucks = inject(TruckService);
   private readonly routes = inject(RouteService);
   private readonly dayService = inject(DayService);
   private readonly cache = inject(ReferenceCacheService);
-  private readonly connectivity = inject(ConnectivityService);
   private readonly alerts = inject(AlertController);
   private readonly toast = inject(ToastController);
   private readonly router = inject(Router);
@@ -416,17 +569,27 @@ export class DashboardPage implements OnInit, OnDestroy {
     () => !!this.truck.truck() && !!this.routeStore.route(),
   );
 
+  /** Personalised greeting line. */
+  protected readonly greeting = computed(() => {
+    const u = this.session.user();
+    const name = u?.email?.split('@')[0] || u?.id?.slice(0, 8) || 'Agent';
+    const hour = new Date().getHours();
+    if (hour < 12) return `Good morning, ${name}`;
+    if (hour < 17) return `Good afternoon, ${name}`;
+    return `Good evening, ${name}`;
+  });
+
   protected readonly tiles: Tile[] = [
-    { label: 'Route map', icon: 'map-outline', route: '/map', requiresDay: false },
-    { label: 'Today’s stops', icon: 'list-outline', route: '/daily', requiresDay: true },
-    { label: 'Delivery', icon: 'swap-horizontal-outline', route: '/delivery', requiresDay: true },
-    { label: 'Process', icon: 'cog-outline', route: '/process', requiresDay: true },
-    { label: 'Signature', icon: 'create-outline', route: '/signature', requiresDay: true },
-    { label: 'Route seals', icon: 'qr-code-outline', route: '/route-scan', requiresDay: true },
-    { label: 'Bank seals', icon: 'barcode-outline', route: '/bank-scan', requiresDay: true },
-    { label: 'Manual evac', icon: 'document-text-outline', route: '/manual-evacuation', requiresDay: true, tone: 'tertiary' },
-    { label: 'Retail evac', icon: 'receipt-outline', route: '/retail-evacuation', requiresDay: true, tone: 'tertiary' },
-    { label: 'Incident', icon: 'alert-circle-outline', route: '/incident', requiresDay: true, tone: 'danger' },
+    { label: 'Route map',     icon: 'map-outline',            route: '/map',                 requiresDay: false },
+    { label: "Today's stops", icon: 'list-outline',           route: '/daily',               requiresDay: true },
+    { label: 'Delivery',      icon: 'swap-horizontal-outline', route: '/delivery',           requiresDay: true },
+    { label: 'Process',       icon: 'cog-outline',            route: '/process',             requiresDay: true },
+    { label: 'Signature',     icon: 'create-outline',         route: '/signature',           requiresDay: true },
+    { label: 'Route seals',   icon: 'qr-code-outline',        route: '/route-scan',          requiresDay: true },
+    { label: 'Bank seals',    icon: 'barcode-outline',        route: '/bank-scan',           requiresDay: true },
+    { label: 'Manual evac',   icon: 'document-text-outline',  route: '/manual-evacuation',   requiresDay: true, tone: 'tertiary' },
+    { label: 'Retail evac',   icon: 'receipt-outline',        route: '/retail-evacuation',   requiresDay: true, tone: 'tertiary' },
+    { label: 'Incident',      icon: 'alert-circle-outline',   route: '/incident',            requiresDay: true, tone: 'danger' },
   ];
 
   async ngOnInit(): Promise<void> {
@@ -484,12 +647,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * SOS button handler. Haptics warning, then confirms before navigating
-   * to the Incident page in SOS mode. The photo capture step on that page
-   * is the real submission gate — a pocket-tap of this FAB cannot fire
-   * an actual alert to dispatch.
-   */
   async onSos(event: Event): Promise<void> {
     event.preventDefault();
     event.stopPropagation();

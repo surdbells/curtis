@@ -14,6 +14,7 @@ import { RouteStore } from '../../core/stores/route.store';
 import { ConfigService } from '../../core/services/config.service';
 import type { RouteStop } from '../../core/models';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 
 /**
  * Route map — Phase 3.
@@ -33,7 +34,7 @@ import { OfflineBannerComponent } from '../../shared/components/offline-banner/o
   selector: 'curtis-map',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonicModule, OfflineBannerComponent],
+  imports: [IonicModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
       :host {
@@ -76,7 +77,7 @@ import { OfflineBannerComponent } from '../../shared/components/offline-banner/o
       <curtis-offline-banner />
       @if (!hasStops()) {
         <div class="empty">
-          <ion-icon name="map-outline" style="font-size: 3rem;" />
+          <curtis-icon name="map-outline" style="font-size: 3rem;" />
           <p>No route loaded. Return to the dashboard and refresh.</p>
         </div>
       } @else {

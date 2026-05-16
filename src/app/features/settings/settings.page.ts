@@ -38,11 +38,13 @@ import { ErrorReportingService } from '../../core/services/error-reporting.servi
  *
  * Routed at /settings, auth-guarded only.
  */
+import { CurtisIconComponent } from '../../shared/components/icon';
+
 @Component({
   selector: 'curtis-settings',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule],
+  imports: [CommonModule, IonicModule, FormsModule, CurtisIconComponent],
   styles: [
     `
       :host { display: block; }
@@ -169,7 +171,7 @@ import { ErrorReportingService } from '../../core/services/error-reporting.servi
         }
         <div class="actions-row">
           <ion-button color="danger" fill="outline" size="small" (click)="confirmLogout()">
-            <ion-icon slot="start" name="log-out-outline" />
+            <curtis-icon slot="start" name="log-out-outline" />
             Sign out
           </ion-button>
         </div>
@@ -184,15 +186,15 @@ import { ErrorReportingService } from '../../core/services/error-reporting.servi
             (ionChange)="onThemeChange($event)"
           >
             <ion-segment-button value="system">
-              <ion-icon name="phone-portrait-outline" />
+              <curtis-icon name="phone-portrait-outline" />
               <ion-label>System</ion-label>
             </ion-segment-button>
             <ion-segment-button value="light">
-              <ion-icon name="sunny-outline" />
+              <curtis-icon name="sunny-outline" />
               <ion-label>Light</ion-label>
             </ion-segment-button>
             <ion-segment-button value="dark">
-              <ion-icon name="moon-outline" />
+              <curtis-icon name="moon-outline" />
               <ion-label>Dark</ion-label>
             </ion-segment-button>
           </ion-segment>
@@ -226,7 +228,7 @@ import { ErrorReportingService } from '../../core/services/error-reporting.servi
         </div>
         <div class="actions-row">
           <ion-button fill="clear" size="small" (click)="resetInterval()">
-            <ion-icon slot="start" name="refresh-outline" />
+            <curtis-icon slot="start" name="refresh-outline" />
             Reset to default
           </ion-button>
         </div>
@@ -260,7 +262,7 @@ import { ErrorReportingService } from '../../core/services/error-reporting.servi
         }
         <div class="actions-row">
           <ion-button size="small" fill="outline" (click)="reregister()">
-            <ion-icon slot="start" name="cloud-upload-outline" />
+            <curtis-icon slot="start" name="cloud-upload-outline" />
             Re-register
           </ion-button>
         </div>
@@ -276,11 +278,11 @@ import { ErrorReportingService } from '../../core/services/error-reporting.servi
           </div>
           <div class="actions-row">
             <ion-button size="small" fill="outline" (click)="openBatterySettings()">
-              <ion-icon slot="start" name="battery-charging-outline" />
+              <curtis-icon slot="start" name="battery-charging-outline" />
               Open battery settings
             </ion-button>
             <ion-button size="small" fill="clear" color="medium" (click)="reopenOnboarding()">
-              <ion-icon slot="start" name="information-circle-outline" />
+              <curtis-icon slot="start" name="information-circle-outline" />
               Show onboarding again
             </ion-button>
           </div>
@@ -330,11 +332,11 @@ import { ErrorReportingService } from '../../core/services/error-reporting.servi
         </div>
         <div class="actions-row">
           <ion-button size="small" fill="outline" (click)="goToQueue()">
-            <ion-icon slot="start" name="list-outline" />
+            <curtis-icon slot="start" name="list-outline" />
             Sync queue
           </ion-button>
           <ion-button size="small" fill="clear" color="medium" (click)="copyDiagnostics()">
-            <ion-icon slot="start" name="copy-outline" />
+            <curtis-icon slot="start" name="copy-outline" />
             Copy diagnostics
           </ion-button>
         </div>

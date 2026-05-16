@@ -17,6 +17,7 @@ import { ScannerService } from '../../core/services/scanner.service';
 import { EvacuationService } from '../../core/services/evacuation.service';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 import type { ScanSession } from '../../core/services/scanner.service';
 import type { Bank, Branch } from '../../core/models';
 
@@ -39,7 +40,7 @@ import type { Bank, Branch } from '../../core/models';
   selector: 'curtis-manual-evacuation',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent],
+  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
       .scanned-row {
@@ -161,7 +162,7 @@ import type { Bank, Branch } from '../../core/models';
           <div class="scanned-row">
             <code>{{ id }}</code>
             <ion-button fill="clear" size="small" color="medium" (click)="removeSeal(id)">
-              <ion-icon slot="icon-only" name="close-circle-outline" />
+              <curtis-icon slot="icon-only" name="close-circle-outline" />
             </ion-button>
           </div>
         }
@@ -170,12 +171,12 @@ import type { Bank, Branch } from '../../core/models';
       <div class="actions">
         @if (!scanning()) {
           <ion-button expand="block" fill="outline" (click)="startScan()" [disabled]="submitting()">
-            <ion-icon slot="start" name="qr-code-outline" />
+            <curtis-icon slot="start" name="qr-code-outline" />
             Scan seals
           </ion-button>
         } @else {
           <ion-button expand="block" color="medium" (click)="stopScan()">
-            <ion-icon slot="start" name="close-outline" />
+            <curtis-icon slot="start" name="close-outline" />
             Stop scanning
           </ion-button>
         }

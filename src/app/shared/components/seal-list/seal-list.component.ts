@@ -7,16 +7,18 @@ import type { Seal } from '../../../core/models';
  * Presentational list of seals with scanned/pending/missing state.
  * Consumers pass in the array; all interaction logic lives in the parent.
  */
+import { CurtisIconComponent } from '../icon';
+
 @Component({
   selector: 'curtis-seal-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule],
+  imports: [CommonModule, IonicModule, CurtisIconComponent],
   template: `
     <ion-list>
       @for (seal of seals; track seal.id) {
         <ion-item>
-          <ion-icon
+          <curtis-icon
             slot="start"
             [name]="iconFor(seal.status)"
             [color]="colorFor(seal.status)"

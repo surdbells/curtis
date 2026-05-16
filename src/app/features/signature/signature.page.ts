@@ -12,6 +12,7 @@ import { IonicModule, ToastController } from '@ionic/angular';
 import { DeliveryStore } from '../../core/stores/delivery.store';
 import { DeliveryService } from '../../core/services/delivery.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 import { SignaturePadComponent } from '../../shared/components/signature-pad/signature-pad.component';
 
 /**
@@ -25,7 +26,7 @@ import { SignaturePadComponent } from '../../shared/components/signature-pad/sig
   selector: 'curtis-signature',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, OfflineBannerComponent, SignaturePadComponent],
+  imports: [CommonModule, IonicModule, OfflineBannerComponent, SignaturePadComponent, CurtisIconComponent],
   styles: [
     `
       .note {
@@ -61,7 +62,7 @@ import { SignaturePadComponent } from '../../shared/components/signature-pad/sig
 
       @if (!deliveryStore.isCheckedIn()) {
         <div class="warning">
-          <ion-icon name="warning-outline" /> Not checked in. Return and check in first.
+          <curtis-icon name="warning-outline" /> Not checked in. Return and check in first.
         </div>
       } @else {
         <p class="note">

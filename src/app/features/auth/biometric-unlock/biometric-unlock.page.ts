@@ -19,11 +19,13 @@ import { OnboardingService } from '../../../core/services/onboarding.service';
  * wired, this page is effectively unreachable — the splash only routes
  * here when stored credentials exist.
  */
+import { CurtisIconComponent } from '../../../shared/components/icon';
+
 @Component({
   selector: 'curtis-biometric-unlock',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, RouterLink],
+  imports: [CommonModule, IonicModule, RouterLink, CurtisIconComponent],
   styles: [
     `
       .wrap {
@@ -52,7 +54,7 @@ import { OnboardingService } from '../../../core/services/onboarding.service';
   template: `
     <ion-content>
       <div class="wrap">
-        <ion-icon class="hero" name="finger-print-outline" />
+        <curtis-icon class="hero" name="finger-print-outline" />
         <h2>Unlock CurTIS</h2>
         <p class="sub">
           @if (working()) {

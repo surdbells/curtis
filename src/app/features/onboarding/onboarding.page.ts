@@ -43,11 +43,13 @@ interface OnboardingStep {
  * On completion, OnboardingService.markComplete is called and the
  * agent is routed to /dashboard.
  */
+import { CurtisIconComponent } from '../../shared/components/icon';
+
 @Component({
   selector: 'curtis-onboarding',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule],
+  imports: [CommonModule, IonicModule, CurtisIconComponent],
   styles: [
     `
       :host { display: block; height: 100%; }
@@ -144,7 +146,7 @@ interface OnboardingStep {
         @if (currentStep(); as step) {
           <div class="hero">
             <div class="icon-wrap">
-              <ion-icon [name]="step.icon" />
+              <curtis-icon [name]="step.icon" />
             </div>
             <h1>{{ step.title }}</h1>
             <p>{{ step.body }}</p>
@@ -153,21 +155,21 @@ interface OnboardingStep {
           @if (step.id === 'welcome') {
             <div class="points">
               <div class="point">
-                <ion-icon name="navigate-circle-outline" />
+                <curtis-icon name="navigate-circle-outline" />
                 <div class="text">
                   <strong>Live route tracking</strong>
                   <span>Your truck location is shared with dispatch every 30 seconds while you're on shift. A persistent notification confirms it's running.</span>
                 </div>
               </div>
               <div class="point">
-                <ion-icon name="cloud-upload-outline" />
+                <curtis-icon name="cloud-upload-outline" />
                 <div class="text">
                   <strong>Offline-safe</strong>
                   <span>Drop signal? Reports and scans queue up and sync automatically when connection returns. You'll see a status badge if anything's pending.</span>
                 </div>
               </div>
               <div class="point">
-                <ion-icon name="notifications-outline" />
+                <curtis-icon name="notifications-outline" />
                 <div class="text">
                   <strong>Dispatch alerts</strong>
                   <span>Route changes, urgent messages, and SOS confirmations arrive as push notifications — no need to keep the app open.</span>
@@ -179,14 +181,14 @@ interface OnboardingStep {
           @if (step.id === 'battery' && isAndroid()) {
             <div class="points">
               <div class="point">
-                <ion-icon name="warning-outline" />
+                <curtis-icon name="warning-outline" />
                 <div class="text">
                   <strong>Why this matters</strong>
                   <span>By default, Android may stop CurTIS from running in the background to save battery. For cash-in-transit safety, the tracking service needs to stay active throughout your shift.</span>
                 </div>
               </div>
               <div class="point">
-                <ion-icon name="checkmark-circle-outline" />
+                <curtis-icon name="checkmark-circle-outline" />
                 <div class="text">
                   <strong>What to do</strong>
                   <span>Tap "Open settings" below. On the next screen, find CurTIS and select "Don't optimise" (or "Allow background activity" — wording varies by device).</span>
@@ -198,7 +200,7 @@ interface OnboardingStep {
           <div class="actions">
             @if (step.cta) {
               <ion-button expand="block" (click)="runCta(step.cta)">
-                <ion-icon slot="start" name="settings-outline" />
+                <curtis-icon slot="start" name="settings-outline" />
                 {{ step.cta.label }}
               </ion-button>
             }
@@ -210,7 +212,7 @@ interface OnboardingStep {
             >
               {{ isLastStep() ? "I'm ready — start using CurTIS" : 'Continue' }}
               @if (!isLastStep()) {
-                <ion-icon slot="end" name="arrow-forward-outline" />
+                <curtis-icon slot="end" name="arrow-forward-outline" />
               }
             </ion-button>
           </div>

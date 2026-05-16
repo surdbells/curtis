@@ -1,218 +1,459 @@
-/*
- * App Global CSS
- * ----------------------------------------------------------------------------
- * Put style rules here that you want to apply globally. These styles are for
- * the entire app and not just one component. Additionally, this file can be
- * used as an entry point to import other CSS/Sass files to be included in the
- * output CSS.
- * For more information on global stylesheets, visit the documentation:
- * https://ionicframework.com/docs/layout/global-stylesheets
- */
+// =============================================================================
+// CurTIS Global Styles
+//
+// Imports the design tokens and applies foundational rules:
+//   - Inter as the default font family
+//   - Body/heading reset with tabular numerals for data-heavy UIs
+//   - Ionic component baseline overrides
+//   - A small set of utility classes for repeated layout patterns
+// =============================================================================
 
-/* Core CSS required for Ionic components to work properly */
-@import "@ionic/angular/css/core.css";
+@use './theme/variables.scss';
 
-/* Basic CSS for apps built with Ionic */
-@import "@ionic/angular/css/normalize.css";
-@import "@ionic/angular/css/structure.css";
-@import "@ionic/angular/css/typography.css";
-@import "@ionic/angular/css/display.css";
+/* Ionic CSS */
+@import '@ionic/angular/css/core.css';
+@import '@ionic/angular/css/normalize.css';
+@import '@ionic/angular/css/structure.css';
+@import '@ionic/angular/css/typography.css';
+@import '@ionic/angular/css/display.css';
+@import '@ionic/angular/css/padding.css';
+@import '@ionic/angular/css/float-elements.css';
+@import '@ionic/angular/css/text-alignment.css';
+@import '@ionic/angular/css/text-transformation.css';
+@import '@ionic/angular/css/flex-utils.css';
 
-/* Optional CSS utils that can be commented out */
-@import "@ionic/angular/css/padding.css";
-@import "@ionic/angular/css/float-elements.css";
-@import "@ionic/angular/css/text-alignment.css";
-@import "@ionic/angular/css/text-transformation.css";
-@import "@ionic/angular/css/flex-utils.css";
-
-/**
- * Ionic Dark Mode
- * -----------------------------------------------------
- * For more info, please see:
- * https://ionicframework.com/docs/theming/dark-mode
- */
-
-/* @import "@ionic/angular/css/palettes/dark.always.css"; */
-/* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import "@ionic/angular/css/palettes/dark.system.css";
-
-/* Leaflet core styles (Phase 3 map page) */
-@import "leaflet/dist/leaflet.css";
-
-/* ---------------------------------------------------------------------------
- * Premium polish — global rules (Phase 5 / Commit 3)
- * --------------------------------------------------------------------------- */
+// -----------------------------------------------------------------------------
+// BASE
+// -----------------------------------------------------------------------------
 
 html, body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter",
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--curtis-font-sans);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  color: var(--curtis-text);
   background: var(--curtis-bg);
+}
+
+// Tabular numerals — critical for mileage, GPS coords, queue counts
+.curtis-tabular,
+.kv-row .value,
+.value.mono,
+ion-input input[type="number"],
+ion-input input[inputmode="numeric"] {
+  font-variant-numeric: tabular-nums;
+}
+
+// Headings
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--curtis-font-sans);
   color: var(--curtis-text);
+  letter-spacing: var(--curtis-tracking-tight);
+  line-height: var(--curtis-leading-tight);
+  margin: 0;
 }
 
-/* Display + heading scale */
-h1, h2, h3, h4 {
-  letter-spacing: -0.01em;
-  color: var(--curtis-text);
-}
-h1 { font-weight: 700; font-size: 1.75rem; line-height: 1.2; }
-h2 { font-weight: 700; font-size: 1.375rem; line-height: 1.25; }
-h3 { font-weight: 600; font-size: 1.125rem; line-height: 1.3; }
-h4 { font-weight: 600; font-size: 1rem;     line-height: 1.4; }
+p { margin: 0; }
 
-small, .caption {
-  font-size: 0.78rem;
-  color: var(--curtis-text-subtle);
-  letter-spacing: 0.01em;
-}
+// -----------------------------------------------------------------------------
+// IONIC COMPONENT BASELINE
+// -----------------------------------------------------------------------------
 
-/* Subtle global card style */
-.curtis-card {
-  background: var(--curtis-surface-1);
-  border: 1px solid var(--curtis-border);
-  border-radius: var(--curtis-radius-md);
-  box-shadow: var(--curtis-shadow-sm);
-}
-
-/* Pill chip used for status badges */
-.curtis-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.65rem;
-  border-radius: var(--curtis-radius-pill);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  background: var(--curtis-surface-2);
-  color: var(--curtis-text-muted);
-  border: 1px solid var(--curtis-border);
-}
-
-/* Refined ion-item presentation across the app */
-ion-list-header ion-label {
-  font-weight: 700;
-  font-size: 0.78rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--curtis-text-subtle);
+ion-content {
+  --background: var(--curtis-bg);
+  --color: var(--curtis-text);
 }
 
 ion-toolbar {
   --background: var(--curtis-surface-1);
   --color: var(--curtis-text);
   --border-color: transparent;
+  --border-width: 0;
+  --min-height: 56px;
+  font-family: var(--curtis-font-sans);
 }
 
-/* Buttons */
+ion-title {
+  font-family: var(--curtis-font-sans);
+  font-weight: var(--curtis-weight-semibold);
+  font-size: var(--curtis-text-lg);
+  letter-spacing: var(--curtis-tracking-tight);
+}
+
+ion-header.curtis-header-flat ion-toolbar {
+  --background: var(--curtis-bg);
+  --border-color: transparent;
+}
+
+// Default button refinements
 ion-button {
   --border-radius: var(--curtis-radius-md);
-  letter-spacing: 0.01em;
-  font-weight: 600;
+  --box-shadow: none;
+  font-family: var(--curtis-font-sans);
+  font-weight: var(--curtis-weight-semibold);
+  letter-spacing: 0;
+  text-transform: none;
+  --padding-top: 0.85rem;
+  --padding-bottom: 0.85rem;
+  --padding-start: 1.25rem;
+  --padding-end: 1.25rem;
+  min-height: 44px;
+  font-size: var(--curtis-text-base);
+}
+ion-button[size='small'] {
+  --padding-top: 0.45rem;
+  --padding-bottom: 0.45rem;
+  --padding-start: 0.75rem;
+  --padding-end: 0.75rem;
+  min-height: 32px;
+  font-size: var(--curtis-text-sm);
+}
+ion-button[size='large'] {
+  --padding-top: 1.1rem;
+  --padding-bottom: 1.1rem;
+  min-height: 56px;
+  font-size: var(--curtis-text-md);
 }
 
-/* Refined ion-content backgrounds */
-ion-content {
-  --background: var(--curtis-bg);
+ion-input, ion-textarea, ion-select {
+  --background: var(--curtis-surface-1);
+  --border-radius: var(--curtis-radius-md);
+  --padding-start: 1rem;
+  --padding-end: 1rem;
+  --padding-top: 0.85rem;
+  --padding-bottom: 0.85rem;
+  font-family: var(--curtis-font-sans);
 }
 
-/* Refined ion-list inset cards */
-ion-list.list-ios.list-inset,
-ion-list.list-md.list-inset {
-  border-radius: var(--curtis-radius-md);
-  background: var(--curtis-surface-1);
+ion-item {
+  --background: transparent;
+  --border-color: var(--curtis-border);
+  font-family: var(--curtis-font-sans);
+}
+
+ion-label {
+  font-family: var(--curtis-font-sans);
+  color: var(--curtis-text);
+}
+
+// Segment buttons feel cleaner with custom radius/spacing
+ion-segment {
+  --background: var(--curtis-surface-2);
+  border-radius: var(--curtis-radius-pill);
+  padding: 4px;
+}
+ion-segment-button {
+  --indicator-color: var(--curtis-surface-1);
+  --indicator-height: 100%;
+  --indicator-box-shadow: var(--curtis-shadow-sm);
+  --indicator-border-radius: var(--curtis-radius-pill);
+  --color: var(--curtis-text-muted);
+  --color-checked: var(--ion-color-primary);
+  font-weight: var(--curtis-weight-medium);
+  font-size: var(--curtis-text-sm);
+  text-transform: none;
+  letter-spacing: 0;
+  min-height: 36px;
+}
+
+// Cards
+ion-card {
+  border-radius: var(--curtis-radius-lg);
   box-shadow: var(--curtis-shadow-sm);
   border: 1px solid var(--curtis-border);
+  margin: var(--curtis-space-2);
 }
 
-/* Make ion-input/textarea look intentional */
-ion-input, ion-textarea, ion-select {
-  --background: transparent;
-  --color: var(--curtis-text);
-  --placeholder-color: var(--curtis-text-subtle);
-  --placeholder-opacity: 1;
+// Toasts — match brand
+ion-toast {
+  --border-radius: var(--curtis-radius-md);
+  --box-shadow: var(--curtis-shadow-lg);
+  font-family: var(--curtis-font-sans);
+  --start: var(--curtis-space-4);
+  --end: var(--curtis-space-4);
 }
 
-/* Toast premium look */
-ion-toast::part(button) {
+// Range slider
+ion-range {
+  --bar-background: var(--curtis-border);
+  --bar-background-active: var(--ion-color-primary);
+  --bar-height: 4px;
+  --bar-border-radius: var(--curtis-radius-pill);
+  --knob-size: 22px;
+  --knob-background: var(--curtis-surface-1);
+  --knob-box-shadow: var(--curtis-shadow-sm), 0 0 0 2px var(--ion-color-primary);
+}
+
+// -----------------------------------------------------------------------------
+// UTILITY CLASSES
+// (Curated set — these are the patterns that repeat across pages)
+// -----------------------------------------------------------------------------
+
+// Page chrome ----------------------------------------------------------------
+.curtis-page {
+  padding: var(--curtis-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--curtis-space-4);
+}
+
+.curtis-page--tight { padding: var(--curtis-space-3); gap: var(--curtis-space-3); }
+.curtis-page--wide  { padding: var(--curtis-space-6); gap: var(--curtis-space-6); }
+
+// Section heading ------------------------------------------------------------
+.curtis-section-label {
+  font-size: var(--curtis-text-xs);
+  font-weight: var(--curtis-weight-bold);
+  letter-spacing: var(--curtis-tracking-wider);
+  text-transform: uppercase;
+  color: var(--curtis-text-subtle);
+  margin: var(--curtis-space-2) var(--curtis-space-1) var(--curtis-space-1);
+}
+
+// Card surfaces --------------------------------------------------------------
+.curtis-card {
+  background: var(--curtis-surface-1);
+  border: 1px solid var(--curtis-border);
+  border-radius: var(--curtis-radius-lg);
+  box-shadow: var(--curtis-shadow-sm);
+  overflow: hidden;
+}
+.curtis-card--elevated {
+  background: var(--curtis-surface-1);
+  border: 1px solid var(--curtis-border);
+  border-radius: var(--curtis-radius-xl);
+  box-shadow: var(--curtis-shadow-md);
+}
+.curtis-card--flush {
+  background: var(--curtis-surface-1);
+  border-bottom: 1px solid var(--curtis-border);
+}
+.curtis-card--padded { padding: var(--curtis-space-4); }
+.curtis-card--padded-lg { padding: var(--curtis-space-6); }
+
+// Stat blocks ----------------------------------------------------------------
+.curtis-stat { display: flex; flex-direction: column; gap: var(--curtis-space-1); }
+.curtis-stat__label {
+  font-size: var(--curtis-text-xs);
+  font-weight: var(--curtis-weight-medium);
+  letter-spacing: var(--curtis-tracking-wide);
+  text-transform: uppercase;
+  color: var(--curtis-text-subtle);
+}
+.curtis-stat__value {
+  font-size: var(--curtis-text-xl);
+  font-weight: var(--curtis-weight-bold);
+  color: var(--curtis-text);
+  letter-spacing: var(--curtis-tracking-tight);
+  font-variant-numeric: tabular-nums;
+}
+.curtis-stat__hint {
+  font-size: var(--curtis-text-sm);
+  color: var(--curtis-text-muted);
+}
+
+// Key-value rows ------------------------------------------------------------
+.curtis-kv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--curtis-space-3);
+  padding: var(--curtis-space-3) var(--curtis-space-4);
+  border-bottom: 1px solid var(--curtis-border);
+}
+.curtis-kv-row:last-child { border-bottom: none; }
+.curtis-kv-row__key {
+  font-size: var(--curtis-text-sm);
+  color: var(--curtis-text-muted);
+  font-weight: var(--curtis-weight-medium);
+}
+.curtis-kv-row__value {
+  font-size: var(--curtis-text-sm);
+  font-weight: var(--curtis-weight-semibold);
+  color: var(--curtis-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.curtis-kv-row__value--mono { font-family: var(--curtis-font-mono); font-size: var(--curtis-text-xs); }
+.curtis-kv-row__value--ok    { color: var(--green-600); }
+.curtis-kv-row__value--warn  { color: var(--amber-500); }
+.curtis-kv-row__value--bad   { color: var(--red-500); }
+
+// Pills ---------------------------------------------------------------------
+.curtis-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--curtis-space-1_5);
+  padding: var(--curtis-space-1) var(--curtis-space-2_5);
+  border-radius: var(--curtis-radius-pill);
+  font-size: var(--curtis-text-xs);
+  font-weight: var(--curtis-weight-semibold);
+  letter-spacing: var(--curtis-tracking-wide);
+  white-space: nowrap;
+  background: var(--curtis-surface-2);
+  color: var(--curtis-text);
+  border: 1px solid var(--curtis-border);
+}
+.curtis-pill--primary {
+  background: color-mix(in srgb, var(--ion-color-primary) 12%, transparent);
+  color: var(--ion-color-primary);
+  border-color: color-mix(in srgb, var(--ion-color-primary) 24%, transparent);
+}
+.curtis-pill--success {
+  background: color-mix(in srgb, var(--ion-color-success) 12%, transparent);
+  color: var(--green-600);
+  border-color: color-mix(in srgb, var(--ion-color-success) 24%, transparent);
+}
+.curtis-pill--warning {
+  background: color-mix(in srgb, var(--ion-color-warning) 14%, transparent);
+  color: var(--amber-500);
+  border-color: color-mix(in srgb, var(--ion-color-warning) 28%, transparent);
+}
+.curtis-pill--danger {
+  background: color-mix(in srgb, var(--ion-color-danger) 12%, transparent);
+  color: var(--red-500);
+  border-color: color-mix(in srgb, var(--ion-color-danger) 24%, transparent);
+}
+.curtis-pill--gold {
+  background: color-mix(in srgb, var(--ion-color-tertiary) 14%, transparent);
+  color: var(--gold-700);
+  border-color: color-mix(in srgb, var(--ion-color-tertiary) 30%, transparent);
+}
+
+.curtis-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--curtis-radius-pill);
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+// Tiles (grid item used on dashboard etc.) ---------------------------------
+.curtis-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--curtis-space-3);
+  padding: var(--curtis-space-4);
+  background: var(--curtis-surface-1);
+  border: 1px solid var(--curtis-border);
+  border-radius: var(--curtis-radius-lg);
+  box-shadow: var(--curtis-shadow-xs);
+  transition: transform var(--curtis-duration-fast) var(--curtis-ease-out),
+              box-shadow var(--curtis-duration-fast) var(--curtis-ease-out),
+              border-color var(--curtis-duration-fast) var(--curtis-ease-out);
+  cursor: pointer;
+  text-align: left;
+  min-height: 116px;
+}
+.curtis-tile:hover {
+  border-color: var(--curtis-border-strong);
+  box-shadow: var(--curtis-shadow-md);
+  transform: translateY(-1px);
+}
+.curtis-tile:active {
+  transform: translateY(0);
+  box-shadow: var(--curtis-shadow-xs);
+}
+.curtis-tile__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--curtis-radius-md);
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--ion-color-primary) 10%, transparent);
+  color: var(--ion-color-primary);
+}
+.curtis-tile__icon--gold {
+  background: color-mix(in srgb, var(--ion-color-tertiary) 16%, transparent);
+  color: var(--gold-700);
+}
+.curtis-tile__icon--danger {
+  background: color-mix(in srgb, var(--ion-color-danger) 12%, transparent);
+  color: var(--red-500);
+}
+.curtis-tile__icon--success {
+  background: color-mix(in srgb, var(--ion-color-success) 12%, transparent);
+  color: var(--green-600);
+}
+.curtis-tile__title {
+  font-size: var(--curtis-text-md);
+  font-weight: var(--curtis-weight-semibold);
+  color: var(--curtis-text);
+  line-height: var(--curtis-leading-snug);
+}
+.curtis-tile__subtitle {
+  font-size: var(--curtis-text-sm);
+  color: var(--curtis-text-muted);
+  line-height: var(--curtis-leading-snug);
+}
+
+// Hero card -----------------------------------------------------------------
+.curtis-hero {
+  position: relative;
+  padding: var(--curtis-space-6);
+  border-radius: var(--curtis-radius-xl);
+  background: var(--curtis-gradient-hero);
   color: var(--curtis-text-inverse);
+  box-shadow: var(--curtis-shadow-md);
+  overflow: hidden;
+}
+.curtis-hero::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 80% at 90% 0%, rgba(255, 255, 255, 0.16), transparent 50%),
+    radial-gradient(80% 60% at 0% 100%, rgba(201, 162, 39, 0.18), transparent 60%);
+  pointer-events: none;
+}
+.curtis-hero > * { position: relative; z-index: 1; }
+
+// Inputs (form-control look)  -----------------------------------------------
+.curtis-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--curtis-space-1_5);
+}
+.curtis-field__label {
+  font-size: var(--curtis-text-xs);
+  font-weight: var(--curtis-weight-semibold);
+  letter-spacing: var(--curtis-tracking-wide);
+  text-transform: uppercase;
+  color: var(--curtis-text-subtle);
+}
+.curtis-field__hint {
+  font-size: var(--curtis-text-xs);
+  color: var(--curtis-text-subtle);
 }
 
-/* ---------------------------------------------------------------------------
- * Theme override classes — set on <html> by ThemeService.setPreference().
- *
- * These re-declare the dark-mode tokens outside the prefers-color-scheme
- * media query, with class specificity that wins against :root + the
- * media query because the class itself is on the same html element.
- *
- * 'curtis-force-light' is intentionally NOT needed in light mode (the
- * default :root vars are already light) — but we still apply the class
- * so Ionic's dark.system.css selector (prefers-color-scheme: dark) gets
- * neutralised via the .ios body[mode='ios'] / .md body[mode='md']
- * patterns Ionic listens to. We provide a no-op block here for symmetry
- * and future explicit overrides.
- * --------------------------------------------------------------------------- */
-
-html.curtis-force-light {
-  /* No-op — :root defaults already light. Placeholder for future
-   * light-mode-specific overrides if we ever need them. */
+// Divider -------------------------------------------------------------------
+.curtis-divider {
+  height: 1px;
+  background: var(--curtis-border);
+  margin: var(--curtis-space-3) 0;
 }
 
-html.curtis-force-dark,
-html.curtis-force-dark body {
-  --ion-color-primary: #4A6EE5;
-  --ion-color-primary-rgb: 74, 110, 229;
-  --ion-color-primary-contrast: #06112E;
-  --ion-color-primary-contrast-rgb: 6, 17, 46;
-  --ion-color-primary-shade: #3D5DCE;
-  --ion-color-primary-tint: #6B8AEC;
-
-  --ion-color-secondary: #3554C8;
-  --ion-color-secondary-rgb: 53, 84, 200;
-  --ion-color-secondary-contrast: #ffffff;
-  --ion-color-secondary-contrast-rgb: 255, 255, 255;
-  --ion-color-secondary-shade: #2D48B0;
-  --ion-color-secondary-tint: #506FD3;
-
-  --ion-color-tertiary: #E5C04A;
-  --ion-color-tertiary-rgb: 229, 192, 74;
-  --ion-color-tertiary-contrast: #1a1a1a;
-  --ion-color-tertiary-contrast-rgb: 26, 26, 26;
-  --ion-color-tertiary-shade: #caa941;
-  --ion-color-tertiary-tint: #e8c65c;
-
-  --ion-color-success: #34D399;
-  --ion-color-warning: #FBBF24;
-  --ion-color-danger: #F87171;
-
-  --curtis-bg: #0B0F14;
-  --curtis-surface-1: #131922;
-  --curtis-surface-2: #1A2230;
-  --curtis-surface-3: #232C3D;
-  --curtis-border: #1F2937;
-  --curtis-border-strong: #2D3849;
-
-  --curtis-text: #F3F4F6;
-  --curtis-text-muted: #9CA3AF;
-  --curtis-text-subtle: #6B7280;
-  --curtis-text-inverse: #0B0F14;
-
-  --curtis-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --curtis-shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45);
-  --curtis-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
-
-  --curtis-gradient-primary: linear-gradient(135deg, #021D6A 0%, #4A6EE5 100%);
-  --curtis-gradient-gold:    linear-gradient(135deg, #B18F22 0%, #E5C04A 100%);
-
-  --ion-background-color: #0B0F14;
-  --ion-background-color-rgb: 11, 15, 20;
-  --ion-text-color: #F3F4F6;
-  --ion-text-color-rgb: 243, 244, 246;
-  --ion-card-background: #131922;
-  --ion-toolbar-background: #131922;
-  --ion-item-background: #131922;
-  --ion-tab-bar-background: #131922;
+// Animations utility --------------------------------------------------------
+@keyframes curtis-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+.curtis-animate-in {
+  animation: curtis-fade-up var(--curtis-duration-slow) var(--curtis-ease-out) both;
+}
+
+// Hide scrollbar but keep scroll ---------------------------------------------
+.curtis-scroll-x {
+  display: flex;
+  gap: var(--curtis-space-3);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--curtis-space-2);
+}
+.curtis-scroll-x::-webkit-scrollbar { display: none; }
+.curtis-scroll-x > * { scroll-snap-align: start; flex-shrink: 0; }

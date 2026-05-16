@@ -16,6 +16,7 @@ import { CameraService } from '../../core/services/camera.service';
 import { EvacuationService } from '../../core/services/evacuation.service';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 import type { Retailer, RetailerBranch } from '../../core/models';
 
 /**
@@ -33,7 +34,7 @@ import type { Retailer, RetailerBranch } from '../../core/models';
   selector: 'curtis-retail-evacuation',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent],
+  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
       .preview {
@@ -117,7 +118,7 @@ import type { Retailer, RetailerBranch } from '../../core/models';
           <img [src]="'data:image/jpeg;base64,' + imageBase64()" alt="Receipt preview" />
         } @else {
           <div class="placeholder">
-            <ion-icon name="camera-outline" style="font-size: 3rem;" />
+            <curtis-icon name="camera-outline" style="font-size: 3rem;" />
             <p>No receipt captured yet</p>
           </div>
         }
@@ -125,7 +126,7 @@ import type { Retailer, RetailerBranch } from '../../core/models';
 
       <div class="actions">
         <ion-button expand="block" fill="outline" (click)="capture()" [disabled]="submitting()">
-          <ion-icon slot="start" name="camera-outline" />
+          <curtis-icon slot="start" name="camera-outline" />
           {{ imageBase64() ? 'Retake' : 'Capture' }} receipt
         </ion-button>
         <ion-button expand="block" [disabled]="!canSubmit() || submitting()" (click)="submit()">

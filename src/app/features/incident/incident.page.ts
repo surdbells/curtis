@@ -18,6 +18,7 @@ import { CameraService } from '../../core/services/camera.service';
 import { LocationService } from '../../core/services/location.service';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 import {
   INCIDENT_TYPES,
   INCIDENT_SEVERITIES,
@@ -42,7 +43,7 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
   selector: 'curtis-incident',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent],
+  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
       :host { display: block; }
@@ -144,7 +145,7 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
 
       @if (sosMode()) {
         <div class="sos-banner">
-          <ion-icon name="warning" />
+          <curtis-icon name="warning" />
           High-priority incident pre-filled — confirm details and submit.
         </div>
       }
@@ -203,20 +204,20 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
           <img [src]="'data:image/jpeg;base64,' + imageBase64()" alt="Incident photo" />
         } @else {
           <div class="placeholder">
-            <ion-icon name="camera-outline" style="font-size: 3rem;" />
+            <curtis-icon name="camera-outline" style="font-size: 3rem;" />
             <p>Photo required — tap below to capture</p>
           </div>
         }
       </div>
 
       <ion-button expand="block" fill="outline" style="margin: 0 1rem;" (click)="capture()" [disabled]="submitting()">
-        <ion-icon slot="start" name="camera-outline" />
+        <curtis-icon slot="start" name="camera-outline" />
         {{ imageBase64() ? 'Retake' : 'Capture' }} photo
       </ion-button>
 
       @if (locationFix(); as fix) {
         <div class="stamp" style="margin-top: 0.5rem;">
-          <ion-icon name="location-outline" /> {{ fix.latitude.toFixed(5) }}, {{ fix.longitude.toFixed(5) }}
+          <curtis-icon name="location-outline" /> {{ fix.latitude.toFixed(5) }}, {{ fix.longitude.toFixed(5) }}
           @if (fix.accuracy) {
             · ±{{ fix.accuracy.toFixed(0) }}m
           }
@@ -225,29 +226,29 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
         <div class="stamp"><ion-spinner name="dots" /> Acquiring location…</div>
       } @else {
         <div class="stamp" style="color: var(--ion-color-warning);">
-          <ion-icon name="alert-circle-outline" /> Location unavailable — required
+          <curtis-icon name="alert-circle-outline" /> Location unavailable — required
         </div>
       }
 
       <div class="req-list">
         <div class="req" [class.met]="!!typeId">
-          <ion-icon [name]="typeId ? 'checkmark-circle' : 'ellipse-outline'" />
+          <curtis-icon [name]="typeId ? 'checkmark-circle' : 'ellipse-outline'" />
           Type selected
         </div>
         <div class="req" [class.met]="!!severity">
-          <ion-icon [name]="severity ? 'checkmark-circle' : 'ellipse-outline'" />
+          <curtis-icon [name]="severity ? 'checkmark-circle' : 'ellipse-outline'" />
           Severity selected
         </div>
         <div class="req" [class.met]="note.trim().length > 0">
-          <ion-icon [name]="note.trim().length > 0 ? 'checkmark-circle' : 'ellipse-outline'" />
+          <curtis-icon [name]="note.trim().length > 0 ? 'checkmark-circle' : 'ellipse-outline'" />
           Description added
         </div>
         <div class="req" [class.met]="!!imageBase64()">
-          <ion-icon [name]="imageBase64() ? 'checkmark-circle' : 'ellipse-outline'" />
+          <curtis-icon [name]="imageBase64() ? 'checkmark-circle' : 'ellipse-outline'" />
           Photo captured
         </div>
         <div class="req" [class.met]="!!locationFix()">
-          <ion-icon [name]="locationFix() ? 'checkmark-circle' : 'ellipse-outline'" />
+          <curtis-icon [name]="locationFix() ? 'checkmark-circle' : 'ellipse-outline'" />
           Location available
         </div>
       </div>
@@ -263,7 +264,7 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
             <ion-spinner slot="start" name="crescent" />
             Sending…
           } @else {
-            <ion-icon slot="start" name="send" />
+            <curtis-icon slot="start" name="send" />
             Submit incident
           }
         </ion-button>

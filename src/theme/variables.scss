@@ -1,187 +1,344 @@
-// CurTIS theme tokens.
-//
-// Brand palette (Phase 8 — repainted to match CurTIS official navy logo):
-//   Primary    #021D6A  Deep navy (institutional / banking trust)
-//   Secondary  #0C3BA6  Lighter navy for accents
-//   Tertiary   #C9A227  Warm gold (operations highlights, unchanged from Phase 5)
-//
-// Surface tiers (light): 0 = page bg, 1 = card, 2 = elevated card, 3 = modal
-// Surface tiers (dark):  same hierarchy with cooler tones
-
 // =============================================================================
-// LIGHT MODE (default)
+// CurTIS Design System — Phase 9
+//
+// Token-first SCSS. Every visual decision in the app traces back to a CSS
+// custom property defined here. Components consume tokens via var(...) —
+// they never hardcode colours, spacing, shadows, or radii.
+//
+// Sections:
+//   1. Typography (Inter font-face, scale, line-height, letter-spacing)
+//   2. Colour palette (brand + neutral scales)
+//   3. Light-mode tokens (semantic)
+//   4. Dark-mode tokens (semantic, lifted for contrast)
+//   5. Ionic palette bridge (--ion-color-*)
 // =============================================================================
 
-:root {
-  /* Primary scale */
-  --ion-color-primary: #021D6A;
-  --ion-color-primary-rgb: 2, 29, 106;
-  --ion-color-primary-contrast: #ffffff;
-  --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #001356;
-  --ion-color-primary-tint: #203B92;
+// -----------------------------------------------------------------------------
+// 1. TYPOGRAPHY
+// -----------------------------------------------------------------------------
 
-  --ion-color-secondary: #0C3BA6;
-  --ion-color-secondary-rgb: 12, 59, 166;
-  --ion-color-secondary-contrast: #ffffff;
-  --ion-color-secondary-contrast-rgb: 255, 255, 255;
-  --ion-color-secondary-shade: #0A3290;
-  --ion-color-secondary-tint: #2855B6;
-
-  --ion-color-tertiary: #C9A227;
-  --ion-color-tertiary-rgb: 201, 162, 39;
-  --ion-color-tertiary-contrast: #1a1a1a;
-  --ion-color-tertiary-contrast-rgb: 26, 26, 26;
-  --ion-color-tertiary-shade: #b18f22;
-  --ion-color-tertiary-tint: #ceab3d;
-
-  /* Semantic */
-  --ion-color-success: #16A34A;
-  --ion-color-success-rgb: 22, 163, 74;
-  --ion-color-success-contrast: #ffffff;
-  --ion-color-success-contrast-rgb: 255, 255, 255;
-  --ion-color-success-shade: #138f41;
-  --ion-color-success-tint: #2eac5c;
-
-  --ion-color-warning: #D97706;
-  --ion-color-warning-rgb: 217, 119, 6;
-  --ion-color-warning-contrast: #ffffff;
-  --ion-color-warning-contrast-rgb: 255, 255, 255;
-  --ion-color-warning-shade: #bf6905;
-  --ion-color-warning-tint: #dd8520;
-
-  --ion-color-danger: #DC2626;
-  --ion-color-danger-rgb: 220, 38, 38;
-  --ion-color-danger-contrast: #ffffff;
-  --ion-color-danger-contrast-rgb: 255, 255, 255;
-  --ion-color-danger-shade: #c22222;
-  --ion-color-danger-tint: #e03c3c;
-
-  /* Surfaces (custom tokens, used via var() in components) */
-  --curtis-bg: #F7F8FA;
-  --curtis-surface-1: #FFFFFF;
-  --curtis-surface-2: #FFFFFF;
-  --curtis-surface-3: #FFFFFF;
-  --curtis-border: #E5E7EB;
-  --curtis-border-strong: #D1D5DB;
-
-  /* Text */
-  --curtis-text: #111827;
-  --curtis-text-muted: #4B5563;
-  --curtis-text-subtle: #6B7280;
-  --curtis-text-inverse: #FFFFFF;
-
-  /* Shadows — used judiciously for elevation */
-  --curtis-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --curtis-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
-  --curtis-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
-
-  /* Gradients */
-  --curtis-gradient-primary: linear-gradient(135deg, #021D6A 0%, #1A3FB0 100%);
-  --curtis-gradient-gold:    linear-gradient(135deg, #C9A227 0%, #E0BF3F 100%);
-
-  /* Layout */
-  --curtis-radius-sm: 8px;
-  --curtis-radius-md: 12px;
-  --curtis-radius-lg: 16px;
-  --curtis-radius-xl: 20px;
-  --curtis-radius-pill: 999px;
-
-  /* Backgrounds Ionic uses internally */
-  --ion-background-color: var(--curtis-bg);
-  --ion-background-color-rgb: 247, 248, 250;
-  --ion-text-color: var(--curtis-text);
-  --ion-text-color-rgb: 17, 24, 39;
-  --ion-card-background: var(--curtis-surface-1);
-  --ion-toolbar-background: var(--curtis-surface-1);
-  --ion-item-background: var(--curtis-surface-1);
-  --ion-tab-bar-background: var(--curtis-surface-1);
-
-  /* Step colors (Ionic uses these for various subtle UI tones) */
-  --ion-color-step-50:  #F4F5F8;
-  --ion-color-step-100: #ECEDF0;
-  --ion-color-step-150: #E4E6EA;
-  --ion-color-step-200: #DCDEE3;
-  --ion-color-step-250: #D4D6DD;
-  --ion-color-step-300: #C5C8D0;
-  --ion-color-step-400: #A8ABB4;
-  --ion-color-step-500: #8B8E97;
-  --ion-color-step-600: #6E7079;
-  --ion-color-step-700: #51535B;
-  --ion-color-step-800: #34363D;
-  --ion-color-step-900: #1A1B20;
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900; // variable font — single file covers all weights
+  font-display: swap;
+  src: url('/assets/fonts/InterVariable.woff2') format('woff2');
 }
 
-// =============================================================================
-// DARK MODE — follows system preference
-// =============================================================================
-//
-// Ionic's prefers-color-scheme palette is enabled via the
-// `@import "@ionic/angular/css/palettes/dark.system.css"` in global.scss.
-// We override its variables below so the brand palette holds.
+:root {
+  // Family
+  --curtis-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --curtis-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  // Type scale (rem-based, modular ratio 1.25)
+  --curtis-text-xs:   0.75rem;    // 12px — micro labels, badges
+  --curtis-text-sm:   0.8125rem;  // 13px — meta, captions
+  --curtis-text-base: 0.9375rem;  // 15px — body
+  --curtis-text-md:   1rem;       // 16px — emphasised body
+  --curtis-text-lg:   1.125rem;   // 18px — section heading
+  --curtis-text-xl:   1.375rem;   // 22px — page heading
+  --curtis-text-2xl:  1.75rem;    // 28px — hero
+  --curtis-text-3xl:  2.25rem;    // 36px — display
+  --curtis-text-4xl:  3rem;       // 48px — splash
+
+  // Line heights
+  --curtis-leading-tight:   1.2;
+  --curtis-leading-snug:    1.35;
+  --curtis-leading-normal:  1.5;
+  --curtis-leading-relaxed: 1.65;
+
+  // Letter spacing
+  --curtis-tracking-tight:  -0.02em;  // large headings
+  --curtis-tracking-normal: 0;
+  --curtis-tracking-wide:   0.04em;
+  --curtis-tracking-wider:  0.08em;   // small caps / labels
+  --curtis-tracking-widest: 0.16em;   // brand wordmark
+
+  // Weights
+  --curtis-weight-regular:   400;
+  --curtis-weight-medium:    500;
+  --curtis-weight-semibold:  600;
+  --curtis-weight-bold:      700;
+  --curtis-weight-extrabold: 800;
+
+  // -----------------------------------------------------------------------------
+  // SPACING SCALE (Tailwind-aligned, 0.25rem base unit = 4px)
+  // -----------------------------------------------------------------------------
+  --curtis-space-0:    0;
+  --curtis-space-px:   1px;
+  --curtis-space-0_5:  0.125rem;   // 2px
+  --curtis-space-1:    0.25rem;    // 4px
+  --curtis-space-1_5:  0.375rem;   // 6px
+  --curtis-space-2:    0.5rem;     // 8px
+  --curtis-space-2_5:  0.625rem;   // 10px
+  --curtis-space-3:    0.75rem;    // 12px
+  --curtis-space-4:    1rem;       // 16px
+  --curtis-space-5:    1.25rem;    // 20px
+  --curtis-space-6:    1.5rem;     // 24px
+  --curtis-space-8:    2rem;       // 32px
+  --curtis-space-10:   2.5rem;     // 40px
+  --curtis-space-12:   3rem;       // 48px
+  --curtis-space-16:   4rem;       // 64px
+  --curtis-space-20:   5rem;       // 80px
+  --curtis-space-24:   6rem;       // 96px
+
+  // -----------------------------------------------------------------------------
+  // RADIUS SCALE
+  // -----------------------------------------------------------------------------
+  --curtis-radius-none: 0;
+  --curtis-radius-xs:   4px;
+  --curtis-radius-sm:   8px;
+  --curtis-radius-md:   12px;
+  --curtis-radius-lg:   16px;
+  --curtis-radius-xl:   20px;
+  --curtis-radius-2xl:  24px;
+  --curtis-radius-pill: 9999px;
+
+  // -----------------------------------------------------------------------------
+  // ANIMATION TOKENS
+  // -----------------------------------------------------------------------------
+  --curtis-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --curtis-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --curtis-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --curtis-duration-fast:    150ms;
+  --curtis-duration-normal:  220ms;
+  --curtis-duration-slow:    400ms;
+  --curtis-duration-slower:  700ms;
+
+  // -----------------------------------------------------------------------------
+  // 2. COLOUR PALETTE (brand)
+  //    Navy = institutional/trust; Gold = action/highlight; Slate = neutrals.
+  // -----------------------------------------------------------------------------
+
+  // Navy (primary brand)
+  --navy-50:  #EEF2FF;
+  --navy-100: #DCE3FB;
+  --navy-200: #B6C4F5;
+  --navy-300: #8EA1ED;
+  --navy-400: #5F7BDC;
+  --navy-500: #3D5DCE;
+  --navy-600: #2D48B0;
+  --navy-700: #1F378E;
+  --navy-800: #14276A;
+  --navy-900: #021D6A;  // brand primary, matches logo
+  --navy-950: #000F40;
+
+  // Gold (tertiary / highlight)
+  --gold-50:  #FBF7E8;
+  --gold-100: #F5EBC0;
+  --gold-200: #ECDA8B;
+  --gold-300: #E0C552;
+  --gold-400: #D2B232;
+  --gold-500: #C9A227;
+  --gold-600: #B18F22;
+  --gold-700: #8F721B;
+  --gold-800: #6C5615;
+  --gold-900: #4A3B0E;
+
+  // Slate (neutrals)
+  --slate-50:  #F8FAFC;
+  --slate-100: #F1F5F9;
+  --slate-200: #E2E8F0;
+  --slate-300: #CBD5E1;
+  --slate-400: #94A3B8;
+  --slate-500: #64748B;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1E293B;
+  --slate-900: #0F172A;
+  --slate-950: #0B0F14;
+
+  // Semantic status
+  --green-500:  #10B981;
+  --green-600:  #059669;
+  --amber-400:  #FBBF24;
+  --amber-500:  #F59E0B;
+  --red-400:    #F87171;
+  --red-500:    #EF4444;
+  --red-600:    #DC2626;
+
+  // -----------------------------------------------------------------------------
+  // 3. LIGHT-MODE SEMANTIC TOKENS
+  // -----------------------------------------------------------------------------
+
+  // Surfaces (page bg → modal)
+  --curtis-bg:          var(--slate-50);
+  --curtis-surface-1:   #FFFFFF;
+  --curtis-surface-2:   var(--slate-100);
+  --curtis-surface-3:   var(--slate-200);
+
+  // Borders
+  --curtis-border:        var(--slate-200);
+  --curtis-border-strong: var(--slate-300);
+
+  // Text
+  --curtis-text:         var(--slate-900);
+  --curtis-text-muted:   var(--slate-600);
+  --curtis-text-subtle:  var(--slate-500);
+  --curtis-text-faint:   var(--slate-400);
+  --curtis-text-inverse: #FFFFFF;
+
+  // Brand-coloured text accents
+  --curtis-text-brand:   var(--navy-900);
+  --curtis-text-gold:    var(--gold-700);
+
+  // Shadows (soft, modern)
+  --curtis-shadow-xs:  0 1px 2px rgba(2, 29, 106, 0.04);
+  --curtis-shadow-sm:  0 1px 3px rgba(2, 29, 106, 0.06), 0 1px 2px rgba(2, 29, 106, 0.04);
+  --curtis-shadow-md:  0 4px 12px rgba(2, 29, 106, 0.08), 0 2px 4px rgba(2, 29, 106, 0.04);
+  --curtis-shadow-lg:  0 10px 28px rgba(2, 29, 106, 0.12), 0 4px 12px rgba(2, 29, 106, 0.06);
+  --curtis-shadow-xl:  0 20px 50px rgba(2, 29, 106, 0.18);
+
+  // Focus ring
+  --curtis-focus-ring: 0 0 0 3px rgba(2, 29, 106, 0.18);
+
+  // Gradients
+  --curtis-gradient-primary: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-600) 100%);
+  --curtis-gradient-gold:    linear-gradient(135deg, var(--gold-500) 0%, var(--gold-300) 100%);
+  --curtis-gradient-surface: linear-gradient(180deg, #FFFFFF 0%, var(--slate-50) 100%);
+  --curtis-gradient-hero:    linear-gradient(135deg, var(--navy-900) 0%, var(--navy-700) 50%, var(--navy-500) 100%);
+
+  // -----------------------------------------------------------------------------
+  // 5. IONIC PALETTE BRIDGE (light)
+  // -----------------------------------------------------------------------------
+
+  --ion-font-family: var(--curtis-font-sans);
+
+  --ion-color-primary: var(--navy-900);
+  --ion-color-primary-rgb: 2, 29, 106;
+  --ion-color-primary-contrast: #FFFFFF;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: var(--navy-950);
+  --ion-color-primary-tint: var(--navy-700);
+
+  --ion-color-secondary: var(--navy-600);
+  --ion-color-secondary-rgb: 45, 72, 176;
+  --ion-color-secondary-contrast: #FFFFFF;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: var(--navy-700);
+  --ion-color-secondary-tint: var(--navy-500);
+
+  --ion-color-tertiary: var(--gold-500);
+  --ion-color-tertiary-rgb: 201, 162, 39;
+  --ion-color-tertiary-contrast: #1A1A1A;
+  --ion-color-tertiary-contrast-rgb: 26, 26, 26;
+  --ion-color-tertiary-shade: var(--gold-600);
+  --ion-color-tertiary-tint: var(--gold-400);
+
+  --ion-color-success: var(--green-500);
+  --ion-color-success-rgb: 16, 185, 129;
+  --ion-color-success-contrast: #FFFFFF;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: var(--green-600);
+  --ion-color-success-tint: var(--green-500);
+
+  --ion-color-warning: var(--amber-500);
+  --ion-color-warning-rgb: 245, 158, 11;
+  --ion-color-warning-contrast: #1A1A1A;
+  --ion-color-warning-contrast-rgb: 26, 26, 26;
+  --ion-color-warning-shade: #D97706;
+  --ion-color-warning-tint: var(--amber-400);
+
+  --ion-color-danger: var(--red-500);
+  --ion-color-danger-rgb: 239, 68, 68;
+  --ion-color-danger-contrast: #FFFFFF;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: var(--red-600);
+  --ion-color-danger-tint: var(--red-400);
+
+  --ion-color-medium: var(--slate-500);
+  --ion-color-medium-rgb: 100, 116, 139;
+  --ion-color-medium-contrast: #FFFFFF;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: var(--slate-600);
+  --ion-color-medium-tint: var(--slate-400);
+
+  --ion-color-light: var(--slate-100);
+  --ion-color-light-rgb: 241, 245, 249;
+  --ion-color-light-contrast: var(--slate-900);
+  --ion-color-light-contrast-rgb: 15, 23, 42;
+  --ion-color-light-shade: var(--slate-200);
+  --ion-color-light-tint: var(--slate-50);
+
+  --ion-color-dark: var(--slate-900);
+  --ion-color-dark-rgb: 15, 23, 42;
+  --ion-color-dark-contrast: #FFFFFF;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: var(--slate-950);
+  --ion-color-dark-tint: var(--slate-800);
+
+  // Ionic surface mapping
+  --ion-background-color: var(--curtis-bg);
+  --ion-background-color-rgb: 248, 250, 252;
+  --ion-text-color: var(--curtis-text);
+  --ion-text-color-rgb: 15, 23, 42;
+  --ion-card-background: var(--curtis-surface-1);
+  --ion-toolbar-background: var(--curtis-surface-1);
+  --ion-toolbar-color: var(--curtis-text);
+  --ion-item-background: var(--curtis-surface-1);
+  --ion-tab-bar-background: var(--curtis-surface-1);
+  --ion-border-color: var(--curtis-border);
+}
+
+// -----------------------------------------------------------------------------
+// 4. DARK-MODE SEMANTIC TOKENS (system-preference path)
+// -----------------------------------------------------------------------------
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    /* Brand colors — lifted for AA contrast on dark surfaces */
-    --ion-color-primary: #4A6EE5;
-    --ion-color-primary-rgb: 74, 110, 229;
-    --ion-color-primary-contrast: #06112E;
-    --ion-color-primary-contrast-rgb: 6, 17, 46;
-    --ion-color-primary-shade: #3D5DCE;
-    --ion-color-primary-tint: #6B8AEC;
+  :root:not(.curtis-force-light) {
+    --curtis-bg:          var(--slate-950);
+    --curtis-surface-1:   #131922;
+    --curtis-surface-2:   #1A2230;
+    --curtis-surface-3:   #232C3D;
 
-    --ion-color-secondary: #3554C8;
-    --ion-color-secondary-rgb: 53, 84, 200;
-    --ion-color-secondary-contrast: #ffffff;
-    --ion-color-secondary-contrast-rgb: 255, 255, 255;
-    --ion-color-secondary-shade: #2D48B0;
-    --ion-color-secondary-tint: #506FD3;
-
-    --ion-color-tertiary: #E5C04A;
-    --ion-color-tertiary-rgb: 229, 192, 74;
-    --ion-color-tertiary-contrast: #1a1a1a;
-    --ion-color-tertiary-contrast-rgb: 26, 26, 26;
-    --ion-color-tertiary-shade: #caa941;
-    --ion-color-tertiary-tint: #e8c65c;
-
-    --ion-color-success: #34D399;
-    --ion-color-success-rgb: 52, 211, 153;
-    --ion-color-success-contrast: #052E1C;
-    --ion-color-success-contrast-rgb: 5, 46, 28;
-
-    --ion-color-warning: #FBBF24;
-    --ion-color-warning-rgb: 251, 191, 36;
-    --ion-color-warning-contrast: #1F1A04;
-    --ion-color-warning-contrast-rgb: 31, 26, 4;
-
-    --ion-color-danger: #F87171;
-    --ion-color-danger-rgb: 248, 113, 113;
-    --ion-color-danger-contrast: #1F0707;
-    --ion-color-danger-contrast-rgb: 31, 7, 7;
-
-    /* Surface tiers — cool-tinted dark */
-    --curtis-bg: #0B0F14;
-    --curtis-surface-1: #131922;
-    --curtis-surface-2: #1A2230;
-    --curtis-surface-3: #232C3D;
-    --curtis-border: #1F2937;
+    --curtis-border:        #1F2937;
     --curtis-border-strong: #2D3849;
 
-    /* Text */
-    --curtis-text: #F3F4F6;
-    --curtis-text-muted: #9CA3AF;
-    --curtis-text-subtle: #6B7280;
-    --curtis-text-inverse: #0B0F14;
+    --curtis-text:         #F3F4F6;
+    --curtis-text-muted:   #9CA3AF;
+    --curtis-text-subtle:  #6B7280;
+    --curtis-text-faint:   #4B5563;
+    --curtis-text-inverse: var(--slate-950);
 
-    /* Shadows — deeper on dark, less visible (use sparingly) */
-    --curtis-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-    --curtis-shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45);
-    --curtis-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+    --curtis-text-brand:   var(--navy-300);
+    --curtis-text-gold:    var(--gold-400);
 
-    --curtis-gradient-primary: linear-gradient(135deg, #021D6A 0%, #4A6EE5 100%);
-    --curtis-gradient-gold:    linear-gradient(135deg, #B18F22 0%, #E5C04A 100%);
+    --curtis-shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.20);
+    --curtis-shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.35);
+    --curtis-shadow-md:  0 6px 18px rgba(0, 0, 0, 0.45);
+    --curtis-shadow-lg:  0 16px 40px rgba(0, 0, 0, 0.55);
+    --curtis-shadow-xl:  0 24px 60px rgba(0, 0, 0, 0.65);
 
-    /* Ionic internals */
+    --curtis-focus-ring: 0 0 0 3px rgba(74, 110, 229, 0.30);
+
+    --curtis-gradient-primary: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-500) 100%);
+    --curtis-gradient-surface: linear-gradient(180deg, #131922 0%, #0B0F14 100%);
+    --curtis-gradient-hero:    linear-gradient(135deg, var(--navy-950) 0%, var(--navy-800) 50%, var(--navy-500) 100%);
+
+    // Lift primary for AA on dark
+    --ion-color-primary: var(--navy-400);
+    --ion-color-primary-rgb: 95, 123, 220;
+    --ion-color-primary-contrast: var(--navy-950);
+    --ion-color-primary-shade: var(--navy-500);
+    --ion-color-primary-tint: var(--navy-300);
+
+    --ion-color-secondary: var(--navy-500);
+    --ion-color-secondary-shade: var(--navy-600);
+    --ion-color-secondary-tint: var(--navy-400);
+
+    --ion-color-tertiary: var(--gold-400);
+    --ion-color-tertiary-shade: var(--gold-500);
+    --ion-color-tertiary-tint: var(--gold-300);
+
+    --ion-color-success: #34D399;
+    --ion-color-warning: var(--amber-400);
+    --ion-color-danger:  var(--red-400);
+
+    --ion-color-medium: var(--slate-400);
+    --ion-color-light:  var(--slate-800);
+    --ion-color-dark:   var(--slate-100);
+
     --ion-background-color: var(--curtis-bg);
     --ion-background-color-rgb: 11, 15, 20;
     --ion-text-color: var(--curtis-text);
@@ -190,18 +347,49 @@
     --ion-toolbar-background: var(--curtis-surface-1);
     --ion-item-background: var(--curtis-surface-1);
     --ion-tab-bar-background: var(--curtis-surface-1);
-
-    --ion-color-step-50:  #131922;
-    --ion-color-step-100: #1A2230;
-    --ion-color-step-150: #1F2937;
-    --ion-color-step-200: #232C3D;
-    --ion-color-step-250: #2A364A;
-    --ion-color-step-300: #2D3849;
-    --ion-color-step-400: #4B5563;
-    --ion-color-step-500: #6B7280;
-    --ion-color-step-600: #9CA3AF;
-    --ion-color-step-700: #D1D5DB;
-    --ion-color-step-800: #E5E7EB;
-    --ion-color-step-900: #F3F4F6;
+    --ion-border-color: var(--curtis-border);
   }
+}
+
+// Manual override via ThemeService
+:root.curtis-force-dark {
+  --curtis-bg:          var(--slate-950);
+  --curtis-surface-1:   #131922;
+  --curtis-surface-2:   #1A2230;
+  --curtis-surface-3:   #232C3D;
+  --curtis-border:        #1F2937;
+  --curtis-border-strong: #2D3849;
+  --curtis-text:         #F3F4F6;
+  --curtis-text-muted:   #9CA3AF;
+  --curtis-text-subtle:  #6B7280;
+  --curtis-text-faint:   #4B5563;
+  --curtis-text-inverse: var(--slate-950);
+  --curtis-text-brand:   var(--navy-300);
+  --curtis-text-gold:    var(--gold-400);
+  --curtis-shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.20);
+  --curtis-shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.35);
+  --curtis-shadow-md:  0 6px 18px rgba(0, 0, 0, 0.45);
+  --curtis-shadow-lg:  0 16px 40px rgba(0, 0, 0, 0.55);
+  --curtis-shadow-xl:  0 24px 60px rgba(0, 0, 0, 0.65);
+  --curtis-focus-ring: 0 0 0 3px rgba(74, 110, 229, 0.30);
+  --curtis-gradient-primary: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-500) 100%);
+  --curtis-gradient-surface: linear-gradient(180deg, #131922 0%, #0B0F14 100%);
+  --curtis-gradient-hero:    linear-gradient(135deg, var(--navy-950) 0%, var(--navy-800) 50%, var(--navy-500) 100%);
+  --ion-color-primary: var(--navy-400);
+  --ion-color-primary-rgb: 95, 123, 220;
+  --ion-color-primary-contrast: var(--navy-950);
+  --ion-color-primary-shade: var(--navy-500);
+  --ion-color-primary-tint: var(--navy-300);
+  --ion-color-secondary: var(--navy-500);
+  --ion-color-tertiary: var(--gold-400);
+  --ion-color-success: #34D399;
+  --ion-color-warning: var(--amber-400);
+  --ion-color-danger:  var(--red-400);
+  --ion-background-color: var(--curtis-bg);
+  --ion-text-color: var(--curtis-text);
+  --ion-card-background: var(--curtis-surface-1);
+  --ion-toolbar-background: var(--curtis-surface-1);
+  --ion-item-background: var(--curtis-surface-1);
+  --ion-tab-bar-background: var(--curtis-surface-1);
+  --ion-border-color: var(--curtis-border);
 }

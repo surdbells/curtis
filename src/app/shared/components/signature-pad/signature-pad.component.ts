@@ -21,11 +21,13 @@ import SignaturePad from 'signature_pad';
  *
  * Phase 4 will wire the Save flow; in Phase 1 the component just renders.
  */
+import { CurtisIconComponent } from '../icon';
+
 @Component({
   selector: 'curtis-signature-pad',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonicModule],
+  imports: [IonicModule, CurtisIconComponent],
   styles: [
     `
       :host {
@@ -58,7 +60,7 @@ import SignaturePad from 'signature_pad';
     </div>
     <div class="actions">
       <ion-button fill="outline" color="medium" size="small" (click)="clear()">
-        <ion-icon slot="start" name="refresh-outline" />
+        <curtis-icon slot="start" name="refresh-outline" />
         Clear
       </ion-button>
     </div>

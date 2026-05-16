@@ -7,6 +7,7 @@ import { IonicModule, ToastController } from '@ionic/angular';
 import { DeliveryStore } from '../../core/stores/delivery.store';
 import { DeliveryService } from '../../core/services/delivery.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 
 /**
  * Process — Phase 4, second step of the delivery chain.
@@ -22,7 +23,7 @@ import { OfflineBannerComponent } from '../../shared/components/offline-banner/o
   selector: 'curtis-process',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent],
+  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
       .note {
@@ -55,7 +56,7 @@ import { OfflineBannerComponent } from '../../shared/components/offline-banner/o
 
       @if (!deliveryStore.isCheckedIn()) {
         <div class="warning">
-          <ion-icon name="warning-outline" /> Not checked in. Return and check in first.
+          <curtis-icon name="warning-outline" /> Not checked in. Return and check in first.
         </div>
       } @else {
         <p class="note">

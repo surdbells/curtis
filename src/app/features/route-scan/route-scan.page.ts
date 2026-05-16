@@ -17,6 +17,7 @@ import { ScannerService } from '../../core/services/scanner.service';
 import { DayStore } from '../../core/stores/day.store';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 import { SealListComponent } from '../../shared/components/seal-list/seal-list.component';
 import { ScanButtonComponent } from '../../shared/components/scan-button/scan-button.component';
 import type { ScanSession } from '../../core/services/scanner.service';
@@ -43,7 +44,7 @@ import type { Seal } from '../../core/models';
   selector: 'curtis-route-scan',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, OfflineBannerComponent, SealListComponent, ScanButtonComponent],
+  imports: [CommonModule, IonicModule, OfflineBannerComponent, SealListComponent, ScanButtonComponent, CurtisIconComponent],
   styles: [
     `
       .summary {
@@ -99,7 +100,7 @@ import type { Seal } from '../../core/models';
         </div>
       } @else if (expected().length === 0) {
         <div class="empty">
-          <ion-icon name="checkmark-done-circle-outline" style="font-size: 3rem;" />
+          <curtis-icon name="checkmark-done-circle-outline" style="font-size: 3rem;" />
           <p>No incoming seals for this route.</p>
         </div>
       } @else {
@@ -108,7 +109,7 @@ import type { Seal } from '../../core/models';
             <strong>{{ scannedCount() }}</strong> / {{ expected().length }} scanned
           </div>
           <ion-chip color="primary">
-            <ion-icon name="qr-code-outline" />
+            <curtis-icon name="qr-code-outline" />
             <ion-label>Route</ion-label>
           </ion-chip>
         </div>
@@ -118,7 +119,7 @@ import type { Seal } from '../../core/models';
 
         @if (unknownScans().length > 0) {
           <div class="unknown">
-            <ion-icon name="alert-circle-outline" />
+            <curtis-icon name="alert-circle-outline" />
             {{ unknownScans().length }} scan(s) didn't match the expected list — still recorded.
           </div>
         }
@@ -130,7 +131,7 @@ import type { Seal } from '../../core/models';
             <curtis-scan-button label="Scan seals" (scan)="startScan()" />
           } @else {
             <ion-button color="medium" expand="block" (click)="stopScan()">
-              <ion-icon slot="start" name="close-outline" />
+              <curtis-icon slot="start" name="close-outline" />
               Stop scanning
             </ion-button>
           }

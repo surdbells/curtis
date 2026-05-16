@@ -20,11 +20,13 @@ import {
  *
  * Mounted globally inside AppComponent so it appears over any page.
  */
+import { CurtisIconComponent } from '../icon';
+
 @Component({
   selector: 'curtis-push-banner',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule],
+  imports: [CommonModule, IonicModule, CurtisIconComponent],
   styles: [
     `
       :host {
@@ -119,7 +121,7 @@ import {
           [class.success]="color() === 'success'"
           [class.warning]="color() === 'warning'"
         >
-          <ion-icon [name]="iconName()" />
+          <curtis-icon [name]="iconName()" />
         </div>
         <div class="body">
           <div class="title">{{ p.title }}</div>
@@ -133,7 +135,7 @@ import {
           (click)="dismiss($event)"
           aria-label="Dismiss notification"
         >
-          <ion-icon name="close-outline" />
+          <curtis-icon name="close-outline" />
         </button>
       </div>
     }
