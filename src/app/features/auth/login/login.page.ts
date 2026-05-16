@@ -35,8 +35,13 @@ import { PushService } from '../../../core/services/push.service';
         display: grid; place-items: center;
         background: var(--curtis-gradient-primary);
         box-shadow: var(--curtis-shadow-md);
+        overflow: hidden;
       }
       .mark ion-icon { font-size: 1.8rem; color: var(--ion-color-tertiary); }
+      .mark img.brand-icon {
+        width: 88%; height: auto;
+        object-fit: contain;
+      }
       .hero h1 {
         font-size: 1.5rem; font-weight: 800;
         letter-spacing: 0.12em; margin: 0;
@@ -89,7 +94,7 @@ import { PushService } from '../../../core/services/push.service';
       <div class="wrap">
         <div class="hero">
           <div class="mark">
-            <ion-icon name="shield-checkmark-outline" />
+            <img class="brand-icon" src="assets/brand/curtis-wordmark.png" alt="CurTIS logo" />
           </div>
           <h1>CurTIS</h1>
           <p>Cash-in-Transit Field Ops</p>

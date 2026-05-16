@@ -137,7 +137,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
     if (latLngs.length >= 2) {
       L.polyline(latLngs, {
-        color: getComputedStyle(document.documentElement).getPropertyValue('--ion-color-primary').trim() || '#0A4F2A',
+        color: getComputedStyle(document.documentElement).getPropertyValue('--ion-color-primary').trim() || '#021D6A',
         weight: 4,
         opacity: 0.85,
       }).addTo(this.map);

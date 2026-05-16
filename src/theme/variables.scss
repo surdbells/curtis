@@ -1,9 +1,9 @@
 // CurTIS theme tokens.
 //
-// Brand palette:
-//   Primary    #0A4F2A  Deep forest green (vault security feel)
-//   Secondary  #0D6B39  Lighter green for accents
-//   Tertiary   #C9A227  Warm gold (rewards / success accents)
+// Brand palette (Phase 8 — repainted to match CurTIS official navy logo):
+//   Primary    #021D6A  Deep navy (institutional / banking trust)
+//   Secondary  #0C3BA6  Lighter navy for accents
+//   Tertiary   #C9A227  Warm gold (operations highlights, unchanged from Phase 5)
 //
 // Surface tiers (light): 0 = page bg, 1 = card, 2 = elevated card, 3 = modal
 // Surface tiers (dark):  same hierarchy with cooler tones
@@ -14,19 +14,19 @@
 
 :root {
   /* Primary scale */
-  --ion-color-primary: #0A4F2A;
-  --ion-color-primary-rgb: 10, 79, 42;
+  --ion-color-primary: #021D6A;
+  --ion-color-primary-rgb: 2, 29, 106;
   --ion-color-primary-contrast: #ffffff;
   --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #094625;
-  --ion-color-primary-tint: #23613f;
+  --ion-color-primary-shade: #001356;
+  --ion-color-primary-tint: #203B92;
 
-  --ion-color-secondary: #0D6B39;
-  --ion-color-secondary-rgb: 13, 107, 57;
+  --ion-color-secondary: #0C3BA6;
+  --ion-color-secondary-rgb: 12, 59, 166;
   --ion-color-secondary-contrast: #ffffff;
   --ion-color-secondary-contrast-rgb: 255, 255, 255;
-  --ion-color-secondary-shade: #0b5e32;
-  --ion-color-secondary-tint: #257a4d;
+  --ion-color-secondary-shade: #0A3290;
+  --ion-color-secondary-tint: #2855B6;
 
   --ion-color-tertiary: #C9A227;
   --ion-color-tertiary-rgb: 201, 162, 39;
@@ -77,7 +77,7 @@
   --curtis-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
 
   /* Gradients */
-  --curtis-gradient-primary: linear-gradient(135deg, #0A4F2A 0%, #16834A 100%);
+  --curtis-gradient-primary: linear-gradient(135deg, #021D6A 0%, #1A3FB0 100%);
   --curtis-gradient-gold:    linear-gradient(135deg, #C9A227 0%, #E0BF3F 100%);
 
   /* Layout */
@@ -122,20 +122,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Brand colors — slightly lifted for AA contrast on dark surfaces */
-    --ion-color-primary: #2BAE66;
-    --ion-color-primary-rgb: 43, 174, 102;
-    --ion-color-primary-contrast: #062014;
-    --ion-color-primary-contrast-rgb: 6, 32, 20;
-    --ion-color-primary-shade: #259957;
-    --ion-color-primary-tint: #40b674;
+    /* Brand colors — lifted for AA contrast on dark surfaces */
+    --ion-color-primary: #4A6EE5;
+    --ion-color-primary-rgb: 74, 110, 229;
+    --ion-color-primary-contrast: #06112E;
+    --ion-color-primary-contrast-rgb: 6, 17, 46;
+    --ion-color-primary-shade: #3D5DCE;
+    --ion-color-primary-tint: #6B8AEC;
 
-    --ion-color-secondary: #1A8350;
-    --ion-color-secondary-rgb: 26, 131, 80;
+    --ion-color-secondary: #3554C8;
+    --ion-color-secondary-rgb: 53, 84, 200;
     --ion-color-secondary-contrast: #ffffff;
     --ion-color-secondary-contrast-rgb: 255, 255, 255;
-    --ion-color-secondary-shade: #177346;
-    --ion-color-secondary-tint: #318f62;
+    --ion-color-secondary-shade: #2D48B0;
+    --ion-color-secondary-tint: #506FD3;
 
     --ion-color-tertiary: #E5C04A;
     --ion-color-tertiary-rgb: 229, 192, 74;
@@ -178,7 +178,7 @@
     --curtis-shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45);
     --curtis-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
 
-    --curtis-gradient-primary: linear-gradient(135deg, #0A4F2A 0%, #2BAE66 100%);
+    --curtis-gradient-primary: linear-gradient(135deg, #021D6A 0%, #4A6EE5 100%);
     --curtis-gradient-gold:    linear-gradient(135deg, #B18F22 0%, #E5C04A 100%);
 
     /* Ionic internals */

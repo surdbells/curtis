@@ -24,68 +24,63 @@ import { isExpired } from '../../../core/utils/jwt.util';
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 1.25rem;
+        gap: 1.5rem;
         background: var(--curtis-gradient-primary);
         color: var(--curtis-text-inverse);
         text-align: center;
         padding: 2rem;
+        overflow: hidden;
+      }
+      .stage::after {
+        content: '';
+        position: absolute; inset: 0;
+        background: radial-gradient(90% 60% at 50% 40%, rgba(255,255,255,0.10), transparent 70%);
+        pointer-events: none;
       }
 
-      .mark {
-        width: 84px;
-        height: 84px;
-        border-radius: 22px;
-        background: rgba(255, 255, 255, 0.12);
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.2),
-          0 12px 32px rgba(0, 0, 0, 0.35);
-        display: grid;
-        place-items: center;
-        animation: in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
-      }
-      .mark ion-icon {
-        font-size: 2.5rem;
-        color: var(--ion-color-tertiary);
+      .wordmark {
+        position: relative;
+        z-index: 1;
+        max-width: 76%;
+        height: auto;
+        animation: in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
       }
 
-      .brand {
-        animation: in 600ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
-      }
-      .brand .name {
-        font-size: 2rem;
-        font-weight: 800;
-        letter-spacing: 0.16em;
-        margin: 0;
-      }
-      .brand .tag {
-        margin-top: 0.4rem;
-        opacity: 0.85;
-        font-size: 0.85rem;
-        letter-spacing: 0.04em;
+      .tag {
+        position: relative;
+        z-index: 1;
+        opacity: 0.78;
+        font-size: 0.75rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-weight: 600;
+        animation: in 700ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
       }
 
       .pulse {
-        margin-top: 1.5rem;
-        animation: in 600ms cubic-bezier(0.16, 1, 0.3, 1) 200ms both;
+        position: relative;
+        z-index: 1;
+        margin-top: 1.25rem;
+        animation: in 700ms cubic-bezier(0.16, 1, 0.3, 1) 240ms both;
       }
       .pulse ion-spinner { --color: var(--curtis-text-inverse); }
 
       @keyframes in {
-        from { opacity: 0; transform: translateY(6px) scale(0.96); }
-        to   { opacity: 1; transform: translateY(0) scale(1); }
+        from { opacity: 0; transform: translateY(8px) scale(0.97); }
+        to   { opacity: 1; transform: translateY(0)   scale(1);    }
       }
     `,
   ],
   template: `
     <ion-content [fullscreen]="true">
       <div class="stage">
-        <div class="mark">
-          <ion-icon name="shield-checkmark-outline" />
-        </div>
-        <div class="brand">
-          <h1 class="name">CurTIS</h1>
-          <p class="tag">Cash-in-Transit Field Ops</p>
-        </div>
+        <img
+          class="wordmark"
+          src="assets/brand/curtis-wordmark.png"
+          alt="CurTIS — Currency Tracking and Information System"
+        />
+        <div class="tag">Cash-in-Transit Field Ops</div>
         <div class="pulse">
           <ion-spinner name="crescent" />
         </div>
@@ -100,7 +95,7 @@ export class SplashPage implements OnInit {
   private readonly router = inject(Router);
 
   async ngOnInit(): Promise<void> {
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 700));
     const target = await this.decideRoute();
     if (target === '/dashboard') {
       // Already authenticated — re-register for pushes so we pick up
