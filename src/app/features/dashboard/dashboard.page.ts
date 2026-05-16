@@ -250,8 +250,8 @@ const CACHE_KEY_ROUTE = 'phase3.route';
       <ion-toolbar>
         <ion-title>Dashboard</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="confirmLogout()">
-            <ion-icon slot="icon-only" name="log-out-outline" />
+          <ion-button [routerLink]="['/settings']">
+            <ion-icon slot="icon-only" name="settings-outline" />
           </ion-button>
         </ion-buttons>
       </ion-toolbar>

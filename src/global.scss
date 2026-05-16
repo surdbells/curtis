@@ -140,3 +140,79 @@ ion-input, ion-textarea, ion-select {
 ion-toast::part(button) {
   color: var(--curtis-text-inverse);
 }
+
+/* ---------------------------------------------------------------------------
+ * Theme override classes — set on <html> by ThemeService.setPreference().
+ *
+ * These re-declare the dark-mode tokens outside the prefers-color-scheme
+ * media query, with class specificity that wins against :root + the
+ * media query because the class itself is on the same html element.
+ *
+ * 'curtis-force-light' is intentionally NOT needed in light mode (the
+ * default :root vars are already light) — but we still apply the class
+ * so Ionic's dark.system.css selector (prefers-color-scheme: dark) gets
+ * neutralised via the .ios body[mode='ios'] / .md body[mode='md']
+ * patterns Ionic listens to. We provide a no-op block here for symmetry
+ * and future explicit overrides.
+ * --------------------------------------------------------------------------- */
+
+html.curtis-force-light {
+  /* No-op — :root defaults already light. Placeholder for future
+   * light-mode-specific overrides if we ever need them. */
+}
+
+html.curtis-force-dark,
+html.curtis-force-dark body {
+  --ion-color-primary: #4A6EE5;
+  --ion-color-primary-rgb: 74, 110, 229;
+  --ion-color-primary-contrast: #06112E;
+  --ion-color-primary-contrast-rgb: 6, 17, 46;
+  --ion-color-primary-shade: #3D5DCE;
+  --ion-color-primary-tint: #6B8AEC;
+
+  --ion-color-secondary: #3554C8;
+  --ion-color-secondary-rgb: 53, 84, 200;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #2D48B0;
+  --ion-color-secondary-tint: #506FD3;
+
+  --ion-color-tertiary: #E5C04A;
+  --ion-color-tertiary-rgb: 229, 192, 74;
+  --ion-color-tertiary-contrast: #1a1a1a;
+  --ion-color-tertiary-contrast-rgb: 26, 26, 26;
+  --ion-color-tertiary-shade: #caa941;
+  --ion-color-tertiary-tint: #e8c65c;
+
+  --ion-color-success: #34D399;
+  --ion-color-warning: #FBBF24;
+  --ion-color-danger: #F87171;
+
+  --curtis-bg: #0B0F14;
+  --curtis-surface-1: #131922;
+  --curtis-surface-2: #1A2230;
+  --curtis-surface-3: #232C3D;
+  --curtis-border: #1F2937;
+  --curtis-border-strong: #2D3849;
+
+  --curtis-text: #F3F4F6;
+  --curtis-text-muted: #9CA3AF;
+  --curtis-text-subtle: #6B7280;
+  --curtis-text-inverse: #0B0F14;
+
+  --curtis-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --curtis-shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45);
+  --curtis-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+
+  --curtis-gradient-primary: linear-gradient(135deg, #021D6A 0%, #4A6EE5 100%);
+  --curtis-gradient-gold:    linear-gradient(135deg, #B18F22 0%, #E5C04A 100%);
+
+  --ion-background-color: #0B0F14;
+  --ion-background-color-rgb: 11, 15, 20;
+  --ion-text-color: #F3F4F6;
+  --ion-text-color-rgb: 243, 244, 246;
+  --ion-card-background: #131922;
+  --ion-toolbar-background: #131922;
+  --ion-item-background: #131922;
+  --ion-tab-bar-background: #131922;
+}

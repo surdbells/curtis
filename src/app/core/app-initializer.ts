@@ -6,6 +6,7 @@ import { ThemeService } from './services/theme.service';
 import { BatteryService } from './services/battery.service';
 import { OfflineQueueService } from './services/offline-queue.service';
 import { OnboardingService } from './services/onboarding.service';
+import { ConfigService } from './services/config.service';
 import { ErrorReportingService } from './services/error-reporting.service';
 
 /**
@@ -26,6 +27,7 @@ import { ErrorReportingService } from './services/error-reporting.service';
  */
 export const appInitializerProvider = provideAppInitializer(async () => {
   const errorReporting = inject(ErrorReportingService);
+  const config = inject(ConfigService);
   const theme = inject(ThemeService);
   const connectivity = inject(ConnectivityService);
   const storage = inject(StorageService);
@@ -42,11 +44,19 @@ export const appInitializerProvider = provideAppInitializer(async () => {
   }
 
   try {
-    theme.init();
+    await theme.init();
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('Theme init failed', err);
     errorReporting.captureError(err, { feature: 'theme.init' });
+  }
+
+  try {
+    await config.hydrate();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('Config hydrate failed', err);
+    errorReporting.captureError(err, { feature: 'config.hydrate' });
   }
 
   try {

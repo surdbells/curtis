@@ -105,6 +105,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./features/queue/queue.page').then((m) => m.QueuePage),
   },
+  {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/settings/settings.page').then((m) => m.SettingsPage),
+  },
 
   { path: '**', redirectTo: 'splash' },
 ];
