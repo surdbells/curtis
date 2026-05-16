@@ -12,4 +12,9 @@ export const environment = {
 
   mapTileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   mapAttribution: '&copy; OpenStreetMap contributors',
+
+  /** Sentry — TODO: paste the staging project's DSN here. */
+  sentryDsn: '',
+  sentryTracesSampleRate: 0.25, // 25% in staging
+  sentryRelease: 'curtis@0.0.1+staging',
 };

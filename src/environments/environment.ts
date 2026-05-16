@@ -30,4 +30,21 @@ export const environment = {
   /** Base URL for Leaflet OSM tiles. */
   mapTileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   mapAttribution: '&copy; OpenStreetMap contributors',
+
+  /**
+   * Sentry error reporting.
+   *
+   * When `sentryDsn` is an empty string, Sentry is initialised as a no-op
+   * — no requests are made and no events are captured. This is the
+   * expected dev configuration; populate it via the env-var-replacement
+   * step at build time (or paste the DSN literal in for local debug).
+   *
+   * `tracesSampleRate` controls performance/tracing transactions
+   * (Sentry distributes load via probabilistic sampling). 0.0 disables
+   * tracing entirely; 1.0 captures every transaction. Dev defaults to
+   * 0 so a developer running the app doesn't ship tracing data.
+   */
+  sentryDsn: '',
+  sentryTracesSampleRate: 0,
+  sentryRelease: 'curtis@0.0.1+dev',
 };

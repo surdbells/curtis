@@ -18,6 +18,10 @@ export class ConfigService {
   readonly mapTileUrl = environment.mapTileUrl;
   readonly mapAttribution = environment.mapAttribution;
 
+  readonly sentryDsn = environment.sentryDsn;
+  readonly sentryTracesSampleRate = environment.sentryTracesSampleRate;
+  readonly sentryRelease = environment.sentryRelease;
+
   /** Builds an absolute API URL from a relative path. */
   url(path: string): string {
     const p = path.startsWith('/') ? path : `/${path}`;

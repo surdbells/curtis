@@ -10,6 +10,7 @@ export * from './connectivity.service';
 export * from './day.service';
 export * from './delivery.service';
 export * from './device.service';
+export * from './error-reporting.service';
 export * from './ip-lookup.service';
 export * from './location.service';
 export * from './offline-queue.service';

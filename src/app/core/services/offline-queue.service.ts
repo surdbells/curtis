@@ -10,6 +10,7 @@ import type { PluginListenerHandle } from '@capacitor/core';
 import { StorageService } from './storage.service';
 import { ConnectivityService } from './connectivity.service';
 import { ConfigService } from './config.service';
+import { ErrorReportingService } from './error-reporting.service';
 import { nowIsoUtc } from '../utils';
 import type { QueuedRequest } from '../models';
 
@@ -51,6 +52,7 @@ export class OfflineQueueService {
   private readonly storage = inject(StorageService);
   private readonly connectivity = inject(ConnectivityService);
   private readonly config = inject(ConfigService);
+  private readonly errorReporting = inject(ErrorReportingService);
 
   /** Total rows: pending + dead-letter. Used by offline banner badge. */
   readonly pendingCount = signal<number>(0);
@@ -332,6 +334,19 @@ export class OfflineQueueService {
              next_attempt_at = NULL, status = 'dead_letter'
          WHERE id = ?`,
         [newCount, now, errText, row.id],
+      );
+      // Dead-letter is a real operational signal — capture to Sentry.
+      this.errorReporting.captureMessage(
+        `Offline queue row dead-lettered after ${newCount} attempts`,
+        'warning',
+        {
+          feature: 'offline-queue',
+          endpoint: row.url,
+          retryCount: newCount,
+          lastError: errText,
+          idempotencyKey: row.idempotencyKey,
+          createdAt: row.createdAt,
+        },
       );
     } else {
       const backoffMs = BACKOFF_STEPS_MS[Math.min(newCount - 1, BACKOFF_STEPS_MS.length - 1)];

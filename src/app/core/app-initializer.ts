@@ -5,22 +5,26 @@ import { StorageService } from './services/storage.service';
 import { ThemeService } from './services/theme.service';
 import { BatteryService } from './services/battery.service';
 import { OfflineQueueService } from './services/offline-queue.service';
+import { ErrorReportingService } from './services/error-reporting.service';
 
 /**
  * App initializer: runs once at bootstrap, before the first route activates.
  *
  * Order matters:
- *   1. Theme (synchronous, paints status bar correctly on first frame)
- *   2. Connectivity listeners (so the offline interceptor has signal data)
- *   3. SQLite open + schema migration (offline queue needs this)
- *   4. Token hydration (loads persisted session into SessionStore)
- *   5. Battery polling (fires on a 60s interval, exposes signals for UI)
- *   6. Offline queue worker (drain on reconnect / resume / 60s timer)
+ *   1. ErrorReporting (sync; flips the `enabled` signal so subsequent
+ *      service init failures get captured)
+ *   2. Theme (synchronous, paints status bar correctly on first frame)
+ *   3. Connectivity listeners (so the offline interceptor has signal data)
+ *   4. SQLite open + schema migration (offline queue needs this)
+ *   5. Token hydration (loads persisted session into SessionStore)
+ *   6. Battery polling (fires on a 60s interval, exposes signals for UI)
+ *   7. Offline queue worker (drain on reconnect / resume / 60s timer)
  *
  * We swallow errors so a local storage problem on one device doesn't brick
  * the app — the user can still log in fresh.
  */
 export const appInitializerProvider = provideAppInitializer(async () => {
+  const errorReporting = inject(ErrorReportingService);
   const theme = inject(ThemeService);
   const connectivity = inject(ConnectivityService);
   const storage = inject(StorageService);
@@ -29,10 +33,18 @@ export const appInitializerProvider = provideAppInitializer(async () => {
   const queue = inject(OfflineQueueService);
 
   try {
+    errorReporting.init();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('ErrorReporting init failed', err);
+  }
+
+  try {
     theme.init();
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('Theme init failed', err);
+    errorReporting.captureError(err, { feature: 'theme.init' });
   }
 
   try {
@@ -40,6 +52,7 @@ export const appInitializerProvider = provideAppInitializer(async () => {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('Connectivity init failed', err);
+    errorReporting.captureError(err, { feature: 'connectivity.init' });
   }
 
   try {
@@ -47,6 +60,7 @@ export const appInitializerProvider = provideAppInitializer(async () => {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('SQLite init failed', err);
+    errorReporting.captureError(err, { feature: 'storage.init' });
   }
 
   try {
@@ -54,6 +68,7 @@ export const appInitializerProvider = provideAppInitializer(async () => {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('Token hydration failed', err);
+    errorReporting.captureError(err, { feature: 'tokens.hydrate' });
   }
 
   try {
@@ -61,6 +76,7 @@ export const appInitializerProvider = provideAppInitializer(async () => {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('Battery init failed', err);
+    errorReporting.captureError(err, { feature: 'battery.start' });
   }
 
   try {
@@ -68,5 +84,6 @@ export const appInitializerProvider = provideAppInitializer(async () => {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn('Offline queue worker init failed', err);
+    errorReporting.captureError(err, { feature: 'queue.start' });
   }
 });
