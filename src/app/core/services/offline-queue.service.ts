@@ -34,6 +34,11 @@ export class OfflineQueueService {
     };
 
     const db = this.storage.getDb();
+    if (!db) {
+      // SQLite unavailable — surface as a rejection so the offline
+      // interceptor can decide whether to swallow or report.
+      throw new Error('Offline queue unavailable: SQLite not initialised');
+    }
     await db.run(
       `INSERT INTO queued_requests
          (method, url, body, created_at, retry_count, idempotency_key)
@@ -48,6 +53,10 @@ export class OfflineQueueService {
   /** Read the current count of pending requests into the signal. */
   async refreshCount(): Promise<number> {
     const db = this.storage.getDb();
+    if (!db) {
+      this.pendingCount.set(0);
+      return 0;
+    }
     const res = await db.query('SELECT COUNT(*) AS c FROM queued_requests');
     const c = (res.values?.[0]?.['c'] as number | undefined) ?? 0;
     this.pendingCount.set(c);

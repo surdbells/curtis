@@ -17,6 +17,7 @@ export class ReferenceCacheService {
   async get<T>(key: string): Promise<T | null> {
     try {
       const db = this.storage.getDb();
+      if (!db) return null;
       const res = await db.query(
         'SELECT payload FROM reference_cache WHERE cache_key = ? LIMIT 1',
         [key],
@@ -32,6 +33,7 @@ export class ReferenceCacheService {
   async set<T>(key: string, value: T): Promise<void> {
     try {
       const db = this.storage.getDb();
+      if (!db) return;
       await db.run(
         `INSERT INTO reference_cache (cache_key, payload, cached_at)
          VALUES (?, ?, ?)
@@ -48,6 +50,7 @@ export class ReferenceCacheService {
   async delete(key: string): Promise<void> {
     try {
       const db = this.storage.getDb();
+      if (!db) return;
       await db.run('DELETE FROM reference_cache WHERE cache_key = ?', [key]);
     } catch {
       // ignore
