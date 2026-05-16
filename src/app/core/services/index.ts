@@ -23,6 +23,7 @@ export * from './status.service';
 export * from './storage.service';
 export * from './token.service';
 export * from './tracker.service';
+export * from './theme.service';
 export * from './truck.service';
 export * from './evacuation.service';
 export * from './xml-loader.service';

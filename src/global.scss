@@ -38,3 +38,105 @@
 
 /* Leaflet core styles (Phase 3 map page) */
 @import "leaflet/dist/leaflet.css";
+
+/* ---------------------------------------------------------------------------
+ * Premium polish — global rules (Phase 5 / Commit 3)
+ * --------------------------------------------------------------------------- */
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter",
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--curtis-bg);
+  color: var(--curtis-text);
+}
+
+/* Display + heading scale */
+h1, h2, h3, h4 {
+  letter-spacing: -0.01em;
+  color: var(--curtis-text);
+}
+h1 { font-weight: 700; font-size: 1.75rem; line-height: 1.2; }
+h2 { font-weight: 700; font-size: 1.375rem; line-height: 1.25; }
+h3 { font-weight: 600; font-size: 1.125rem; line-height: 1.3; }
+h4 { font-weight: 600; font-size: 1rem;     line-height: 1.4; }
+
+small, .caption {
+  font-size: 0.78rem;
+  color: var(--curtis-text-subtle);
+  letter-spacing: 0.01em;
+}
+
+/* Subtle global card style */
+.curtis-card {
+  background: var(--curtis-surface-1);
+  border: 1px solid var(--curtis-border);
+  border-radius: var(--curtis-radius-md);
+  box-shadow: var(--curtis-shadow-sm);
+}
+
+/* Pill chip used for status badges */
+.curtis-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--curtis-radius-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: var(--curtis-surface-2);
+  color: var(--curtis-text-muted);
+  border: 1px solid var(--curtis-border);
+}
+
+/* Refined ion-item presentation across the app */
+ion-list-header ion-label {
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--curtis-text-subtle);
+}
+
+ion-toolbar {
+  --background: var(--curtis-surface-1);
+  --color: var(--curtis-text);
+  --border-color: transparent;
+}
+
+/* Buttons */
+ion-button {
+  --border-radius: var(--curtis-radius-md);
+  letter-spacing: 0.01em;
+  font-weight: 600;
+}
+
+/* Refined ion-content backgrounds */
+ion-content {
+  --background: var(--curtis-bg);
+}
+
+/* Refined ion-list inset cards */
+ion-list.list-ios.list-inset,
+ion-list.list-md.list-inset {
+  border-radius: var(--curtis-radius-md);
+  background: var(--curtis-surface-1);
+  box-shadow: var(--curtis-shadow-sm);
+  border: 1px solid var(--curtis-border);
+}
+
+/* Make ion-input/textarea look intentional */
+ion-input, ion-textarea, ion-select {
+  --background: transparent;
+  --color: var(--curtis-text);
+  --placeholder-color: var(--curtis-text-subtle);
+  --placeholder-opacity: 1;
+}
+
+/* Toast premium look */
+ion-toast::part(button) {
+  color: var(--curtis-text-inverse);
+}

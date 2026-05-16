@@ -2,23 +2,14 @@ import { Component, ChangeDetectionStrategy, computed, inject } from '@angular/c
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Capacitor } from '@capacitor/core';
 
 import { RouteStore } from '../../core/stores/route.store';
 import { DeliveryStore } from '../../core/stores/delivery.store';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import type { RouteStop } from '../../core/models';
 
-/**
- * Today's stops — Phase 4.
- *
- * Reads stops from RouteStore (hydrated on Dashboard), renders as a list
- * in order. Tap a stop -> begin a delivery (initialises DeliveryStore
- * with bank/branch pre-filled from the stop) and navigate to /delivery.
- *
- * Stops without a branch id are shown but disabled — the delivery flow
- * needs at least a branch reference. An agent hitting a data-incomplete
- * stop falls back to "Manual evacuation" from the dashboard.
- */
 @Component({
   selector: 'curtis-daily',
   standalone: true,
@@ -26,37 +17,62 @@ import type { RouteStop } from '../../core/models';
   imports: [CommonModule, IonicModule, OfflineBannerComponent],
   styles: [
     `
+      :host { display: block; }
+      ion-content { --background: var(--curtis-bg); }
+
       .empty {
-        text-align: center;
-        color: var(--ion-color-medium);
-        padding: 2.5rem 1rem;
+        text-align: center; padding: 3rem 1rem; color: var(--curtis-text-subtle);
       }
-      .empty ion-icon {
-        font-size: 3rem;
+      .empty ion-icon { font-size: 3rem; opacity: 0.5; }
+
+      .list {
+        padding: 0.75rem;
+        display: grid; gap: 0.6rem;
       }
-      ion-item.stop {
-        --padding-start: 1rem;
+      .stop {
+        display: flex; align-items: center; gap: 0.85rem;
+        padding: 0.85rem 1rem;
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-md);
+        box-shadow: var(--curtis-shadow-sm);
+        text-decoration: none; color: var(--curtis-text);
+        transition: transform 120ms ease-out;
       }
+      .stop:active { transform: scale(0.99); }
+      .stop.disabled { opacity: 0.55; pointer-events: none; }
+
       .seq {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 28px;
-        height: 28px;
+        flex-shrink: 0;
+        width: 36px; height: 36px;
         border-radius: 50%;
-        background: var(--ion-color-primary);
-        color: var(--ion-color-primary-contrast);
-        font-size: 0.8rem;
-        font-weight: 700;
-        margin-right: 0.75rem;
+        display: grid; place-items: center;
+        background: var(--curtis-gradient-primary);
+        color: var(--curtis-text-inverse);
+        font-weight: 700; font-size: 0.85rem;
+        box-shadow: var(--curtis-shadow-sm);
       }
-      .status-chip {
-        font-size: 0.7rem;
-        padding: 0.15rem 0.5rem;
+      .body { flex: 1; min-width: 0; }
+      .title {
+        font-weight: 600; line-height: 1.2;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .sub {
+        font-size: 0.78rem; color: var(--curtis-text-subtle);
+        margin-top: 0.15rem;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .pill {
+        flex-shrink: 0;
+        padding: 0.2rem 0.55rem;
         border-radius: 999px;
-        background: var(--ion-color-light);
-        color: var(--ion-color-medium);
+        font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: var(--curtis-surface-2);
+        color: var(--curtis-text-muted);
+        border: 1px solid var(--curtis-border);
       }
+      .chevron { color: var(--curtis-text-subtle); }
     `,
   ],
   template: `
@@ -75,31 +91,31 @@ import type { RouteStop } from '../../core/models';
       @if (stops().length === 0) {
         <div class="empty">
           <ion-icon name="list-outline" />
-          <p>No stops loaded yet. Return to the dashboard and refresh.</p>
+          <h3 style="margin-top: 0.75rem;">No stops yet</h3>
+          <p>Return to the dashboard and pull to refresh.</p>
         </div>
       } @else {
-        <ion-list>
+        <div class="list">
           @for (stop of stops(); track stop.id; let idx = $index) {
-            <ion-item
+            <a
               class="stop"
-              button
-              [detail]="canSelect(stop)"
-              [disabled]="!canSelect(stop)"
+              [class.disabled]="!canSelect(stop)"
               (click)="canSelect(stop) && selectStop(stop)"
             >
-              <span class="seq" slot="start">{{ idx + 1 }}</span>
-              <ion-label>
-                <h2>{{ stop.branchName || stop.address || stop.id }}</h2>
+              <span class="seq">{{ idx + 1 }}</span>
+              <div class="body">
+                <div class="title">{{ stop.branchName || stop.address || stop.id }}</div>
                 @if (stop.address && stop.branchName) {
-                  <p>{{ stop.address }}</p>
+                  <div class="sub">{{ stop.address }}</div>
                 }
-              </ion-label>
+              </div>
               @if (stop.status) {
-                <span class="status-chip" slot="end">{{ stop.status }}</span>
+                <span class="pill">{{ stop.status }}</span>
               }
-            </ion-item>
+              <ion-icon class="chevron" name="chevron-forward-outline" />
+            </a>
           }
-        </ion-list>
+        </div>
       }
     </ion-content>
   `,
@@ -111,21 +127,23 @@ export class DailyPage {
 
   protected readonly stops = computed<RouteStop[]>(() => this.routeStore.stops());
 
-  /** A stop is selectable if it has at least a branch reference. */
   protected canSelect(stop: RouteStop): boolean {
     return !!stop.branchId || !!stop.id;
   }
 
   protected async selectStop(stop: RouteStop): Promise<void> {
+    await this.haptic();
     this.delivery.beginDelivery({
       stopId: String(stop.id),
       bankId: stop.bankId ? String(stop.bankId) : null,
       branchId: stop.branchId ? String(stop.branchId) : null,
-      // TODO(phase-4-samples): the route-stop shape may carry `state` once
-      // real samples land; until then the branch picker falls back to a
-      // state chooser on the Delivery page.
       state: null,
     });
     await this.router.navigateByUrl('/delivery');
+  }
+
+  private async haptic(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+    try { await Haptics.impact({ style: ImpactStyle.Light }); } catch { /* ignore */ }
   }
 }

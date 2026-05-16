@@ -6,18 +6,6 @@ import { SessionStore } from '../../../core/stores/session.store';
 import { BiometricService } from '../../../core/services/biometric.service';
 import { isExpired } from '../../../core/utils/jwt.util';
 
-/**
- * Splash page. Shown briefly on cold start while we decide where to route:
- *
- *   1. Valid unexpired session in memory  →  /dashboard
- *   2. Stored biometric credentials + biometry available  →  /biometric-unlock
- *   3. Otherwise  →  /login
- *
- * Phase 2 ships the three-way logic. Until biometric enrollment is added
- * (deferred to a later settings screen), branch 2 never triggers in
- * practice — the fall-through to /login is the common path for expired or
- * absent sessions.
- */
 @Component({
   selector: 'curtis-splash',
   standalone: true,
@@ -25,32 +13,81 @@ import { isExpired } from '../../../core/utils/jwt.util';
   imports: [IonicModule],
   styles: [
     `
-      .wrap {
+      :host { display: block; height: 100%; }
+      ion-content::part(scroll) { display: flex; align-items: center; justify-content: center; }
+
+      .stage {
+        position: relative;
         height: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 1rem;
+        gap: 1.25rem;
+        background: var(--curtis-gradient-primary);
+        color: var(--curtis-text-inverse);
+        text-align: center;
+        padding: 2rem;
       }
+
+      .mark {
+        width: 84px;
+        height: 84px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.2),
+          0 12px 32px rgba(0, 0, 0, 0.35);
+        display: grid;
+        place-items: center;
+        animation: in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      .mark ion-icon {
+        font-size: 2.5rem;
+        color: var(--ion-color-tertiary);
+      }
+
       .brand {
-        font-size: 2rem;
-        font-weight: 700;
-        letter-spacing: 3px;
-        color: var(--ion-color-primary);
+        animation: in 600ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
       }
-      .tag {
-        color: var(--ion-color-medium);
-        font-size: 0.9rem;
+      .brand .name {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        margin: 0;
+      }
+      .brand .tag {
+        margin-top: 0.4rem;
+        opacity: 0.85;
+        font-size: 0.85rem;
+        letter-spacing: 0.04em;
+      }
+
+      .pulse {
+        margin-top: 1.5rem;
+        animation: in 600ms cubic-bezier(0.16, 1, 0.3, 1) 200ms both;
+      }
+      .pulse ion-spinner { --color: var(--curtis-text-inverse); }
+
+      @keyframes in {
+        from { opacity: 0; transform: translateY(6px) scale(0.96); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
       }
     `,
   ],
   template: `
-    <ion-content>
-      <div class="wrap">
-        <div class="brand">CurTIS</div>
-        <div class="tag">Cash-in-Transit Field Ops</div>
-        <ion-spinner name="crescent" />
+    <ion-content [fullscreen]="true">
+      <div class="stage">
+        <div class="mark">
+          <ion-icon name="shield-checkmark-outline" />
+        </div>
+        <div class="brand">
+          <h1 class="name">CurTIS</h1>
+          <p class="tag">Cash-in-Transit Field Ops</p>
+        </div>
+        <div class="pulse">
+          <ion-spinner name="crescent" />
+        </div>
       </div>
     </ion-content>
   `,
@@ -61,11 +98,8 @@ export class SplashPage implements OnInit {
   private readonly router = inject(Router);
 
   async ngOnInit(): Promise<void> {
-    // Tiny delay so the splash is perceivable on fast cold starts.
-    await new Promise((r) => setTimeout(r, 400));
-
-    const destination = await this.decideRoute();
-    void this.router.navigateByUrl(destination, { replaceUrl: true });
+    await new Promise((r) => setTimeout(r, 500));
+    void this.router.navigateByUrl(await this.decideRoute(), { replaceUrl: true });
   }
 
   private async decideRoute(): Promise<string> {
@@ -73,8 +107,6 @@ export class SplashPage implements OnInit {
     const authed = this.session.isAuthenticated() && !isExpired(token, 0);
     if (authed) return '/dashboard';
 
-    // Expired-or-absent session. Offer biometric unlock only if both
-    // (a) platform biometry is available AND (b) we have stored credentials.
     try {
       const biometry = await this.biometric.available();
       if (biometry) {
@@ -82,9 +114,8 @@ export class SplashPage implements OnInit {
         if (creds) return '/biometric-unlock';
       }
     } catch {
-      // biometry unavailable — fall through
+      // fall through
     }
-
     return '/login';
   }
 }

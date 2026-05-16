@@ -11,6 +11,8 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AlertController, IonicModule, ToastController } from '@ionic/angular';
 import { App } from '@capacitor/app';
+import { Haptics, NotificationType, ImpactStyle } from '@capacitor/haptics';
+import { Capacitor } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { firstValueFrom } from 'rxjs';
 
@@ -31,26 +33,14 @@ interface Tile {
   label: string;
   icon: string;
   route: string;
-  phase: number;
   requiresDay: boolean;
+  /** Group for visual styling. */
+  tone?: 'primary' | 'tertiary' | 'success' | 'danger';
 }
 
 const CACHE_KEY_TRUCK = 'phase3.truck';
 const CACHE_KEY_ROUTE = 'phase3.route';
 
-/**
- * Dashboard — Phase 3.
- *
- * On init:
- *   1. Hydrate truck and route from SQLite cache (instant render).
- *   2. Fetch /GetTruckByUserId in the foreground.
- *      - No truck assigned  -> surface warning state, skip route fetch.
- *      - Truck assigned     -> fetch /GetRouteByUserId.
- *   3. On pull-to-refresh, repeat the fetch pair.
- *
- * Start Day / End Day are handled via DayService + ion-alert prompts that
- * collect mileage + gas level (both required).
- */
 @Component({
   selector: 'curtis-dashboard',
   standalone: true,
@@ -58,80 +48,155 @@ const CACHE_KEY_ROUTE = 'phase3.route';
   imports: [CommonModule, IonicModule, RouterLink, OfflineBannerComponent],
   styles: [
     `
-      .day-banner {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        padding: 0.9rem 1rem;
-        background: var(--ion-color-primary);
-        color: var(--ion-color-primary-contrast);
+      :host { display: block; }
+      ion-content { --background: var(--curtis-bg); }
+
+      /* Day banner */
+      .banner {
+        margin: 0.75rem 0.75rem 0;
+        padding: 1rem 1.1rem;
+        border-radius: var(--curtis-radius-lg);
+        background: var(--curtis-gradient-primary);
+        color: var(--curtis-text-inverse);
+        box-shadow: var(--curtis-shadow-md);
+        position: relative;
+        overflow: hidden;
       }
-      .day-banner .meta {
-        font-size: 0.78rem;
-        opacity: 0.88;
+      .banner::after {
+        content: '';
+        position: absolute; inset: 0;
+        background: radial-gradient(120% 80% at 90% 0%, rgba(255,255,255,0.16), transparent 60%);
+        pointer-events: none;
+      }
+      .banner-row {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 0.75rem; position: relative; z-index: 1;
+      }
+      .banner-status { display: flex; flex-direction: column; gap: 0.1rem; }
+      .banner-label {
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em;
+        text-transform: uppercase; opacity: 0.78;
+      }
+      .banner-title { font-size: 1.15rem; font-weight: 700; }
+      .banner-meta { font-size: 0.78rem; opacity: 0.85; }
+      .banner ion-button { --border-radius: var(--curtis-radius-pill); font-weight: 600; }
+
+      .pulse {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        font-size: 0.72rem; opacity: 0.9;
+      }
+      .pulse-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--ion-color-tertiary);
+        box-shadow: 0 0 0 0 currentColor;
+        animation: dot 1.8s ease-out infinite;
+      }
+      @keyframes dot {
+        0%   { box-shadow: 0 0 0 0 rgba(229, 192, 74, 0.6); }
+        100% { box-shadow: 0 0 0 9px rgba(229, 192, 74, 0); }
       }
 
+      /* Summary card */
       .summary {
-        padding: 0.75rem 1rem 0;
-        display: grid;
-        gap: 0.5rem;
+        margin: 0.75rem;
+        padding: 0.5rem 0;
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-md);
+        box-shadow: var(--curtis-shadow-sm);
       }
       .summary .row {
-        display: flex;
-        justify-content: space-between;
-        gap: 0.75rem;
-        padding: 0.6rem 0.9rem;
-        background: var(--ion-color-light);
-        border-radius: 10px;
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0.65rem 1rem;
+        border-bottom: 1px solid var(--curtis-border);
       }
-      .summary .row .label {
-        color: var(--ion-color-medium);
-        font-size: 0.8rem;
+      .summary .row:last-child { border-bottom: none; }
+      .summary .label {
+        color: var(--curtis-text-subtle);
+        font-size: 0.78rem;
       }
-      .summary .row .value {
+      .summary .value {
         font-weight: 600;
+        color: var(--curtis-text);
       }
 
+      /* Tile grid */
       .grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
-        padding: 0.75rem;
+        gap: 0.65rem;
+        padding: 0.5rem 0.75rem 1.25rem;
       }
       .tile {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        padding: 1.25rem 0.5rem;
-        border-radius: 12px;
-        background: var(--ion-color-light);
-        text-align: center;
-        color: var(--ion-color-dark);
+        display: flex; flex-direction: column;
+        align-items: flex-start; justify-content: space-between;
+        gap: 0.7rem;
+        padding: 1rem 1rem 0.9rem;
+        min-height: 118px;
+        border-radius: var(--curtis-radius-lg);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        box-shadow: var(--curtis-shadow-sm);
+        color: var(--curtis-text);
         text-decoration: none;
-        min-height: 110px;
+        transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+        position: relative;
+        overflow: hidden;
       }
+      .tile:active { transform: scale(0.98); box-shadow: var(--curtis-shadow-sm); }
       .tile.disabled {
-        opacity: 0.45;
+        opacity: 0.55;
         pointer-events: none;
       }
-      .tile ion-icon {
-        font-size: 2rem;
+
+      .tile .icon-wrap {
+        width: 38px; height: 38px;
+        border-radius: 10px;
+        display: grid; place-items: center;
+        background: color-mix(in srgb, var(--ion-color-primary) 12%, transparent);
+      }
+      .tile.tone-tertiary .icon-wrap {
+        background: color-mix(in srgb, var(--ion-color-tertiary) 18%, transparent);
+      }
+      .tile.tone-danger .icon-wrap {
+        background: color-mix(in srgb, var(--ion-color-danger) 14%, transparent);
+      }
+      .tile .icon-wrap ion-icon {
+        font-size: 1.25rem;
         color: var(--ion-color-primary);
       }
-      .tile small {
-        color: var(--ion-color-medium);
+      .tile.tone-tertiary .icon-wrap ion-icon { color: var(--ion-color-tertiary); }
+      .tile.tone-danger .icon-wrap ion-icon  { color: var(--ion-color-danger); }
+
+      .tile .label { font-weight: 600; line-height: 1.25; }
+      .tile .meta {
+        font-size: 0.7rem;
+        color: var(--curtis-text-subtle);
+      }
+      .tile.disabled .meta {
+        color: var(--ion-color-warning-shade);
       }
 
+      /* Warning card */
       .warning {
-        margin: 0.75rem 1rem;
-        padding: 0.9rem 1rem;
-        border-radius: 10px;
-        background: var(--ion-color-warning);
-        color: var(--ion-color-warning-contrast);
+        margin: 0.75rem;
+        padding: 0.85rem 1rem;
+        border-radius: var(--curtis-radius-md);
+        background: color-mix(in srgb, var(--ion-color-warning) 12%, var(--curtis-surface-1));
+        border: 1px solid color-mix(in srgb, var(--ion-color-warning) 40%, transparent);
+        color: var(--curtis-text);
         font-size: 0.85rem;
+        display: flex; align-items: center; gap: 0.55rem;
+      }
+      .warning ion-icon {
+        color: var(--ion-color-warning);
+        font-size: 1.1rem;
+        flex-shrink: 0;
+      }
+
+      .skeleton-stage {
+        padding: 2rem 1rem; text-align: center;
+        color: var(--curtis-text-subtle);
       }
     `,
   ],
@@ -154,37 +219,56 @@ const CACHE_KEY_ROUTE = 'phase3.route';
 
       <curtis-offline-banner />
 
-      <div class="day-banner">
-        <div>
-          <strong>{{ day.dayActive() ? 'Day active' : 'Day not started' }}</strong>
-          @if (session.user(); as u) {
-            <div class="meta">{{ u.email }}</div>
-          }
+      <!-- Day banner -->
+      <div class="banner">
+        <div class="banner-row">
+          <div class="banner-status">
+            <span class="banner-label">
+              {{ day.dayActive() ? 'Active shift' : 'Awaiting start' }}
+            </span>
+            <span class="banner-title">
+              {{ day.dayActive() ? 'Day in progress' : 'Day not started' }}
+            </span>
+            @if (session.user(); as u) {
+              <span class="banner-meta">{{ u.email }}</span>
+            }
+            @if (day.dayActive()) {
+              <span class="pulse">
+                <span class="pulse-dot"></span>
+                Tracking
+              </span>
+            }
+          </div>
+          <ion-button
+            [color]="day.dayActive() ? 'danger' : 'tertiary'"
+            size="default"
+            [disabled]="dayActionWorking() || (!day.dayActive() && !canStartDay())"
+            (click)="day.dayActive() ? promptEndDay() : promptStartDay()"
+          >
+            @if (dayActionWorking()) {
+              <ion-spinner slot="start" name="crescent" />
+            } @else {
+              <ion-icon
+                slot="start"
+                [name]="day.dayActive() ? 'stop-circle-outline' : 'play-circle-outline'"
+              />
+            }
+            {{ day.dayActive() ? 'End day' : 'Start day' }}
+          </ion-button>
         </div>
-        <ion-button
-          [color]="day.dayActive() ? 'light' : 'tertiary'"
-          [disabled]="dayActionWorking() || !canStartDay()"
-          fill="solid"
-          size="small"
-          (click)="day.dayActive() ? promptEndDay() : promptStartDay()"
-        >
-          @if (dayActionWorking()) {
-            <ion-spinner slot="start" name="crescent" />
-          }
-          {{ day.dayActive() ? 'End day' : 'Start day' }}
-        </ion-button>
       </div>
 
       @if (!loading() && !truck.truck()) {
         <div class="warning">
-          <ion-icon name="warning-outline" /> No truck assigned. Contact operations to continue.
+          <ion-icon name="warning-outline" />
+          No truck assigned. Contact operations to continue.
         </div>
       }
 
       @if (loading() && !truck.truck()) {
-        <div style="padding: 1rem; text-align: center; color: var(--ion-color-medium);">
+        <div class="skeleton-stage">
           <ion-spinner name="crescent" />
-          <div>Loading assignment…</div>
+          <div style="margin-top: 0.4rem;">Loading assignment…</div>
         </div>
       }
 
@@ -222,16 +306,20 @@ const CACHE_KEY_ROUTE = 'phase3.route';
       <div class="grid">
         @for (t of tiles; track t.route) {
           @if (t.requiresDay && !day.dayActive()) {
-            <div class="tile disabled">
-              <ion-icon [name]="t.icon" />
-              <div>{{ t.label }}</div>
-              <small>Start day first</small>
+            <div class="tile disabled" [class.tone-tertiary]="t.tone === 'tertiary'" [class.tone-danger]="t.tone === 'danger'">
+              <div class="icon-wrap"><ion-icon [name]="t.icon" /></div>
+              <div>
+                <div class="label">{{ t.label }}</div>
+                <div class="meta">Start day first</div>
+              </div>
             </div>
           } @else {
-            <a class="tile" [routerLink]="t.route">
-              <ion-icon [name]="t.icon" />
-              <div>{{ t.label }}</div>
-              <small>Phase {{ t.phase }}</small>
+            <a class="tile" [routerLink]="t.route" [class.tone-tertiary]="t.tone === 'tertiary'" [class.tone-danger]="t.tone === 'danger'">
+              <div class="icon-wrap"><ion-icon [name]="t.icon" /></div>
+              <div>
+                <div class="label">{{ t.label }}</div>
+                <div class="meta">Tap to open</div>
+              </div>
             </a>
           }
         }
@@ -256,25 +344,23 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   protected readonly loading = signal(false);
   protected readonly dayActionWorking = signal(false);
-
   private backListener?: PluginListenerHandle;
 
-  /** Can the agent start the day? Requires both truck and route available. */
   protected readonly canStartDay = computed(
     () => !!this.truck.truck() && !!this.routeStore.route(),
   );
 
   protected readonly tiles: Tile[] = [
-    { label: 'Route map', icon: 'map-outline', route: '/map', phase: 3, requiresDay: false },
-    { label: 'Today’s stops', icon: 'list-outline', route: '/daily', phase: 4, requiresDay: true },
-    { label: 'Delivery', icon: 'swap-horizontal-outline', route: '/delivery', phase: 4, requiresDay: true },
-    { label: 'Process', icon: 'cog-outline', route: '/process', phase: 4, requiresDay: true },
-    { label: 'Signature', icon: 'create-outline', route: '/signature', phase: 4, requiresDay: true },
-    { label: 'Route seals', icon: 'qr-code-outline', route: '/route-scan', phase: 5, requiresDay: true },
-    { label: 'Bank seals', icon: 'barcode-outline', route: '/bank-scan', phase: 5, requiresDay: true },
-    { label: 'Manual evacuation', icon: 'document-text-outline', route: '/manual-evacuation', phase: 5, requiresDay: true },
-    { label: 'Retail evacuation', icon: 'receipt-outline', route: '/retail-evacuation', phase: 5, requiresDay: true },
-    { label: 'Incident', icon: 'alert-circle-outline', route: '/incident', phase: 6, requiresDay: true },
+    { label: 'Route map', icon: 'map-outline', route: '/map', requiresDay: false },
+    { label: 'Today’s stops', icon: 'list-outline', route: '/daily', requiresDay: true },
+    { label: 'Delivery', icon: 'swap-horizontal-outline', route: '/delivery', requiresDay: true },
+    { label: 'Process', icon: 'cog-outline', route: '/process', requiresDay: true },
+    { label: 'Signature', icon: 'create-outline', route: '/signature', requiresDay: true },
+    { label: 'Route seals', icon: 'qr-code-outline', route: '/route-scan', requiresDay: true },
+    { label: 'Bank seals', icon: 'barcode-outline', route: '/bank-scan', requiresDay: true },
+    { label: 'Manual evac', icon: 'document-text-outline', route: '/manual-evacuation', requiresDay: true, tone: 'tertiary' },
+    { label: 'Retail evac', icon: 'receipt-outline', route: '/retail-evacuation', requiresDay: true, tone: 'tertiary' },
+    { label: 'Incident', icon: 'alert-circle-outline', route: '/incident', requiresDay: true, tone: 'danger' },
   ];
 
   async ngOnInit(): Promise<void> {
@@ -288,38 +374,11 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.backListener = undefined;
   }
 
-  /**
-   * Intercept the hardware back button on Dashboard. Android's default
-   * behaviour is to exit the app, which on a CIT device mid-shift would
-   * be disastrous — instead we prompt for logout confirmation or minimise
-   * the app if the day is active.
-   *
-   * @capacitor/app's listener is a no-op on iOS, so this is effectively
-   * Android-only.
-   */
-  private async wireBackButton(): Promise<void> {
-    if (this.backListener) return;
-    this.backListener = await App.addListener('backButton', () => {
-      if (this.day.dayActive()) {
-        // Mid-shift: minimise instead of exiting. The tracker stays alive.
-        void App.minimizeApp().catch(() => undefined);
-        return;
-      }
-      // Day not active: treat back as a logout gesture with confirmation.
-      void this.confirmLogout();
-    });
-  }
-
-  /** Pull-to-refresh handler. */
   async onRefresh(event: CustomEvent): Promise<void> {
     await this.loadAssignment();
     (event.target as HTMLIonRefresherElement).complete();
   }
 
-  /**
-   * Load cached truck + route first so the UI is never blank if SQLite
-   * has a prior copy. Called synchronously on init before network fetch.
-   */
   private async hydrateFromCache(): Promise<void> {
     const [cachedTruck, cachedRoute] = await Promise.all([
       this.cache.get<Truck>(CACHE_KEY_TRUCK),
@@ -329,22 +388,14 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (cachedRoute) this.routeStore.setRoute(cachedRoute);
   }
 
-  /**
-   * Fetch truck, then route. Skips the network round-trip when offline —
-   * cache is already loaded.
-   */
   private async loadAssignment(): Promise<void> {
     if (!this.connectivity.online()) return;
-
     this.loading.set(true);
     try {
-      // 1. Truck first — per Phase 3 decision.
       const truck = await firstValueFrom(this.trucks.getMyTruck()).catch(() => null);
       if (truck) {
         this.truck.set(truck);
         await this.cache.set(CACHE_KEY_TRUCK, truck);
-
-        // 2. Route only if truck resolved.
         const route = await firstValueFrom(this.routes.getMyRoute()).catch(() => null);
         if (route) {
           this.routeStore.setRoute(route);
@@ -356,7 +407,17 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
   }
 
-  /** Open an alert prompting for opening mileage + gas level. */
+  private async wireBackButton(): Promise<void> {
+    if (this.backListener) return;
+    this.backListener = await App.addListener('backButton', () => {
+      if (this.day.dayActive()) {
+        void App.minimizeApp().catch(() => undefined);
+        return;
+      }
+      void this.confirmLogout();
+    });
+  }
+
   async promptStartDay(): Promise<void> {
     if (!this.canStartDay()) {
       await this.showToast('Truck and route must load before starting the day.', 'warning');
@@ -373,21 +434,8 @@ export class DashboardPage implements OnInit, OnDestroy {
       header: 'Start day',
       message: 'Record opening mileage and gas level to begin the route.',
       inputs: [
-        {
-          name: 'mileage',
-          type: 'number',
-          placeholder: 'Opening mileage',
-          min: 0,
-          attributes: { inputmode: 'numeric' },
-        },
-        {
-          name: 'gasLevel',
-          type: 'number',
-          placeholder: 'Gas level (%)',
-          min: 0,
-          max: 100,
-          attributes: { inputmode: 'numeric' },
-        },
+        { name: 'mileage',  type: 'number', placeholder: 'Opening mileage', min: 0, attributes: { inputmode: 'numeric' } },
+        { name: 'gasLevel', type: 'number', placeholder: 'Gas level (%)',   min: 0, max: 100, attributes: { inputmode: 'numeric' } },
       ],
       buttons: [
         { text: 'Cancel', role: 'cancel' },
@@ -414,21 +462,8 @@ export class DashboardPage implements OnInit, OnDestroy {
       header: 'End day',
       message: 'Record closing mileage and gas level to end the route.',
       inputs: [
-        {
-          name: 'mileage',
-          type: 'number',
-          placeholder: 'Closing mileage',
-          min: 0,
-          attributes: { inputmode: 'numeric' },
-        },
-        {
-          name: 'gasLevel',
-          type: 'number',
-          placeholder: 'Gas level (%)',
-          min: 0,
-          max: 100,
-          attributes: { inputmode: 'numeric' },
-        },
+        { name: 'mileage',  type: 'number', placeholder: 'Closing mileage', min: 0, attributes: { inputmode: 'numeric' } },
+        { name: 'gasLevel', type: 'number', placeholder: 'Gas level (%)',   min: 0, max: 100, attributes: { inputmode: 'numeric' } },
       ],
       buttons: [
         { text: 'Cancel', role: 'cancel' },
@@ -452,16 +487,15 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   private async runStartDay(input: {
-    mileage: string;
-    gasLevel: string;
-    truckId: string;
-    routeId: string;
+    mileage: string; gasLevel: string; truckId: string; routeId: string;
   }): Promise<void> {
     this.dayActionWorking.set(true);
     try {
       await this.dayService.start(input);
+      await this.haptic('success');
       await this.showToast('Day started. Drive safe.', 'success');
     } catch (err) {
+      await this.haptic('error');
       await this.showToast(this.describeError(err, 'Could not start day.'), 'danger');
     } finally {
       this.dayActionWorking.set(false);
@@ -472,8 +506,10 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.dayActionWorking.set(true);
     try {
       await this.dayService.end(input);
+      await this.haptic('success');
       await this.showToast('Day ended.', 'success');
     } catch (err) {
+      await this.haptic('error');
       await this.showToast(this.describeError(err, 'Could not end day.'), 'danger');
     } finally {
       this.dayActionWorking.set(false);
@@ -504,8 +540,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     await alert.present();
   }
 
-  // --- validators & helpers ---
-
   private isPositiveNumber(v: string): boolean {
     if (!v) return false;
     const n = Number(v);
@@ -526,12 +560,18 @@ export class DashboardPage implements OnInit, OnDestroy {
     return fallback;
   }
 
+  private async haptic(kind: 'success' | 'error' | 'tap'): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      if (kind === 'success') await Haptics.notification({ type: NotificationType.Success });
+      else if (kind === 'error') await Haptics.notification({ type: NotificationType.Error });
+      else await Haptics.impact({ style: ImpactStyle.Light });
+    } catch { /* ignore */ }
+  }
+
   private async showToast(message: string, color: 'danger' | 'warning' | 'success') {
     const t = await this.toast.create({
-      message,
-      duration: 2500,
-      position: 'top',
-      color,
+      message, duration: 2500, position: 'top', color,
       buttons: [{ icon: 'close', role: 'cancel' }],
     });
     await t.present();

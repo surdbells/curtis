@@ -1,13 +1,19 @@
-// CurTIS brand theme.
-// Palette:
-//   primary   — #0A4F2A  deep forest green (brand, matches native splash)
-//   secondary — #0D6B39  lighter variant
-//   tertiary  — #C9A227  warm gold accent
-//   success   — #2DD36F  (ionic default)
-//   warning   — #FFC409  (ionic default)
-//   danger    — #EB445A  (ionic default)
+// CurTIS theme tokens.
+//
+// Brand palette:
+//   Primary    #0A4F2A  Deep forest green (vault security feel)
+//   Secondary  #0D6B39  Lighter green for accents
+//   Tertiary   #C9A227  Warm gold (rewards / success accents)
+//
+// Surface tiers (light): 0 = page bg, 1 = card, 2 = elevated card, 3 = modal
+// Surface tiers (dark):  same hierarchy with cooler tones
+
+// =============================================================================
+// LIGHT MODE (default)
+// =============================================================================
 
 :root {
+  /* Primary scale */
   --ion-color-primary: #0A4F2A;
   --ion-color-primary-rgb: 10, 79, 42;
   --ion-color-primary-contrast: #ffffff;
@@ -24,8 +30,178 @@
 
   --ion-color-tertiary: #C9A227;
   --ion-color-tertiary-rgb: 201, 162, 39;
-  --ion-color-tertiary-contrast: #000000;
-  --ion-color-tertiary-contrast-rgb: 0, 0, 0;
+  --ion-color-tertiary-contrast: #1a1a1a;
+  --ion-color-tertiary-contrast-rgb: 26, 26, 26;
   --ion-color-tertiary-shade: #b18f22;
   --ion-color-tertiary-tint: #ceab3d;
+
+  /* Semantic */
+  --ion-color-success: #16A34A;
+  --ion-color-success-rgb: 22, 163, 74;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #138f41;
+  --ion-color-success-tint: #2eac5c;
+
+  --ion-color-warning: #D97706;
+  --ion-color-warning-rgb: 217, 119, 6;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #bf6905;
+  --ion-color-warning-tint: #dd8520;
+
+  --ion-color-danger: #DC2626;
+  --ion-color-danger-rgb: 220, 38, 38;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #c22222;
+  --ion-color-danger-tint: #e03c3c;
+
+  /* Surfaces (custom tokens, used via var() in components) */
+  --curtis-bg: #F7F8FA;
+  --curtis-surface-1: #FFFFFF;
+  --curtis-surface-2: #FFFFFF;
+  --curtis-surface-3: #FFFFFF;
+  --curtis-border: #E5E7EB;
+  --curtis-border-strong: #D1D5DB;
+
+  /* Text */
+  --curtis-text: #111827;
+  --curtis-text-muted: #4B5563;
+  --curtis-text-subtle: #6B7280;
+  --curtis-text-inverse: #FFFFFF;
+
+  /* Shadows — used judiciously for elevation */
+  --curtis-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --curtis-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --curtis-shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+
+  /* Gradients */
+  --curtis-gradient-primary: linear-gradient(135deg, #0A4F2A 0%, #16834A 100%);
+  --curtis-gradient-gold:    linear-gradient(135deg, #C9A227 0%, #E0BF3F 100%);
+
+  /* Layout */
+  --curtis-radius-sm: 8px;
+  --curtis-radius-md: 12px;
+  --curtis-radius-lg: 16px;
+  --curtis-radius-xl: 20px;
+  --curtis-radius-pill: 999px;
+
+  /* Backgrounds Ionic uses internally */
+  --ion-background-color: var(--curtis-bg);
+  --ion-background-color-rgb: 247, 248, 250;
+  --ion-text-color: var(--curtis-text);
+  --ion-text-color-rgb: 17, 24, 39;
+  --ion-card-background: var(--curtis-surface-1);
+  --ion-toolbar-background: var(--curtis-surface-1);
+  --ion-item-background: var(--curtis-surface-1);
+  --ion-tab-bar-background: var(--curtis-surface-1);
+
+  /* Step colors (Ionic uses these for various subtle UI tones) */
+  --ion-color-step-50:  #F4F5F8;
+  --ion-color-step-100: #ECEDF0;
+  --ion-color-step-150: #E4E6EA;
+  --ion-color-step-200: #DCDEE3;
+  --ion-color-step-250: #D4D6DD;
+  --ion-color-step-300: #C5C8D0;
+  --ion-color-step-400: #A8ABB4;
+  --ion-color-step-500: #8B8E97;
+  --ion-color-step-600: #6E7079;
+  --ion-color-step-700: #51535B;
+  --ion-color-step-800: #34363D;
+  --ion-color-step-900: #1A1B20;
+}
+
+// =============================================================================
+// DARK MODE — follows system preference
+// =============================================================================
+//
+// Ionic's prefers-color-scheme palette is enabled via the
+// `@import "@ionic/angular/css/palettes/dark.system.css"` in global.scss.
+// We override its variables below so the brand palette holds.
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Brand colors — slightly lifted for AA contrast on dark surfaces */
+    --ion-color-primary: #2BAE66;
+    --ion-color-primary-rgb: 43, 174, 102;
+    --ion-color-primary-contrast: #062014;
+    --ion-color-primary-contrast-rgb: 6, 32, 20;
+    --ion-color-primary-shade: #259957;
+    --ion-color-primary-tint: #40b674;
+
+    --ion-color-secondary: #1A8350;
+    --ion-color-secondary-rgb: 26, 131, 80;
+    --ion-color-secondary-contrast: #ffffff;
+    --ion-color-secondary-contrast-rgb: 255, 255, 255;
+    --ion-color-secondary-shade: #177346;
+    --ion-color-secondary-tint: #318f62;
+
+    --ion-color-tertiary: #E5C04A;
+    --ion-color-tertiary-rgb: 229, 192, 74;
+    --ion-color-tertiary-contrast: #1a1a1a;
+    --ion-color-tertiary-contrast-rgb: 26, 26, 26;
+    --ion-color-tertiary-shade: #caa941;
+    --ion-color-tertiary-tint: #e8c65c;
+
+    --ion-color-success: #34D399;
+    --ion-color-success-rgb: 52, 211, 153;
+    --ion-color-success-contrast: #052E1C;
+    --ion-color-success-contrast-rgb: 5, 46, 28;
+
+    --ion-color-warning: #FBBF24;
+    --ion-color-warning-rgb: 251, 191, 36;
+    --ion-color-warning-contrast: #1F1A04;
+    --ion-color-warning-contrast-rgb: 31, 26, 4;
+
+    --ion-color-danger: #F87171;
+    --ion-color-danger-rgb: 248, 113, 113;
+    --ion-color-danger-contrast: #1F0707;
+    --ion-color-danger-contrast-rgb: 31, 7, 7;
+
+    /* Surface tiers — cool-tinted dark */
+    --curtis-bg: #0B0F14;
+    --curtis-surface-1: #131922;
+    --curtis-surface-2: #1A2230;
+    --curtis-surface-3: #232C3D;
+    --curtis-border: #1F2937;
+    --curtis-border-strong: #2D3849;
+
+    /* Text */
+    --curtis-text: #F3F4F6;
+    --curtis-text-muted: #9CA3AF;
+    --curtis-text-subtle: #6B7280;
+    --curtis-text-inverse: #0B0F14;
+
+    /* Shadows — deeper on dark, less visible (use sparingly) */
+    --curtis-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --curtis-shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45);
+    --curtis-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+
+    --curtis-gradient-primary: linear-gradient(135deg, #0A4F2A 0%, #2BAE66 100%);
+    --curtis-gradient-gold:    linear-gradient(135deg, #B18F22 0%, #E5C04A 100%);
+
+    /* Ionic internals */
+    --ion-background-color: var(--curtis-bg);
+    --ion-background-color-rgb: 11, 15, 20;
+    --ion-text-color: var(--curtis-text);
+    --ion-text-color-rgb: 243, 244, 246;
+    --ion-card-background: var(--curtis-surface-1);
+    --ion-toolbar-background: var(--curtis-surface-1);
+    --ion-item-background: var(--curtis-surface-1);
+    --ion-tab-bar-background: var(--curtis-surface-1);
+
+    --ion-color-step-50:  #131922;
+    --ion-color-step-100: #1A2230;
+    --ion-color-step-150: #1F2937;
+    --ion-color-step-200: #232C3D;
+    --ion-color-step-250: #2A364A;
+    --ion-color-step-300: #2D3849;
+    --ion-color-step-400: #4B5563;
+    --ion-color-step-500: #6B7280;
+    --ion-color-step-600: #9CA3AF;
+    --ion-color-step-700: #D1D5DB;
+    --ion-color-step-800: #E5E7EB;
+    --ion-color-step-900: #F3F4F6;
+  }
 }
