@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mainc"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.rainbeta.curtistracker.DailyActivity">
+
+
+    <LinearLayout
+        android:id="@+id/innerc"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="0dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/lbtruck"
+            android:layout_width="match_parent"
+            android:layout_height="35dp"
+            android:background="@color/curtis"
+            android:gravity="bottom"
+            android:paddingLeft="10dp"
+            android:text="SELECT TRUCK"
+            android:textStyle="bold" />
+
+        <com.toptoche.searchablespinnerlibrary.SearchableSpinner
+            android:id="@+id/spinner"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:paddingLeft="15dp"
+            android:paddingRight="15dp" />
+
+
+        <TextView
+            android:id="@+id/lbmileage"
+            android:layout_width="match_parent"
+            android:layout_height="35dp"
+            android:background="@color/curtis"
+            android:gravity="bottom"
+            android:paddingLeft="10dp"
+            android:text="CURRENT MILEAGE"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/mileage"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:ems="10"
+            android:hint="756564"
+            android:inputType="numberDecimal"
+            android:paddingLeft="15dp" />
+
+        <TextView
+            android:id="@+id/fuelLabel"
+            android:layout_width="match_parent"
+            android:layout_height="35dp"
+            android:background="@color/curtis"
+            android:gravity="bottom"
+            android:paddingLeft="10dp"
+            android:text="FUEL LEVEL"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/fuel"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:entries="@array/fuelLevel"
+            android:paddingLeft="15dp"
+            android:paddingRight="15dp"
+            android:spinnerMode="dialog" />
+
+        <TextView
+            android:id="@+id/textView8"
+            android:layout_width="match_parent"
+            android:layout_height="35dp"
+            android:background="@color/curtis"
+            android:gravity="bottom"
+            android:paddingLeft="10dp"
+            android:text="STATUS"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/statusSelect"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginBottom="100dp"
+            android:entries="@array/actionStatus"
+            android:paddingLeft="15dp"
+            android:paddingRight="15dp"
+            android:spinnerMode="dialog" />
+
+        <Button
+            android:id="@+id/submitUpdate"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="match_parent"
+            android:layout_height="70dp"
+            android:onClick="start_end_day"
+            android:text="SUBMIT"
+            android:textSize="18sp" />
+
+    </LinearLayout>
+
+</LinearLayout>

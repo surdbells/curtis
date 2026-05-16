@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MyResult>
+    <Result>
+        <Status>0</Status>
+        <Msg>successful</Msg>
+        <Banks>
+            <Bank id="769f92fd-d495-4010-afd9-53857fd1f5e9">Access Bank Plc</Bank>
+            <Bank id="e503ff74-a781-4e44-a019-82919066d1ec">Citibank Nigeria Limited</Bank>
+            <Bank id="116b91a8-9376-4870-9c54-bdfc7c3089fe">Diamond Bank Plc</Bank>
+            <Bank id="38517b71-4418-4d02-93ba-bd35a6e12d17">Ecobank Nigeria Plc</Bank>
+            <Bank id="c6659d13-83ef-4d78-b747-bc59108f9f65">Fidelity Bank Plc</Bank>
+            <Bank id="00d3368e-c676-4428-8e28-e7d4f872adc8">First Bank of Nigeria Plc</Bank>
+            <Bank id="902b65ea-65e3-42fa-82cf-5e90d191cc2e">First City Monument Bank Plc</Bank>
+            <Bank id="33c7935b-af01-42d6-9a0f-b292828a2d75">Guaranty Trust Bank Plc</Bank>
+            <Bank id="4143f1ac-b469-4f8b-90c3-c6142cce7719">Heritage Banking Company Ltd</Bank>
+            <Bank id="abe28449-4c92-4536-a2e6-7d0f48c86346">Key Stone Bank</Bank>
+            <Bank id="d5b20964-bd36-4ff0-a13c-f1de4c1a677a">Polaris Bank</Bank>
+            <Bank id="cbfbc5f3-8326-431c-be0b-179e4a924d52">Providus Bank</Bank>
+            <Bank id="2fc1f2c6-8ad2-485d-950d-f3d4edc50515">Stanbic IBTC Bank Ltd</Bank>
+            <Bank id="8c14dc37-619a-4c2a-8ab1-317a259a638a">Standard Chartered Bank Nigeria Ltd</Bank>
+            <Bank id="76d37129-d4ac-4d36-9744-5ddf023dfe02">Sterling Bank Plc</Bank>
+            <Bank id="65c8dba6-0189-423a-8d4d-8361d309a0e8">Suntrust Bank</Bank>
+            <Bank id="faddd83a-d21d-473f-891c-e6f80ba0112f">Union Bank of Nigeria Plc</Bank>
+            <Bank id="a60a4148-299c-4a10-881c-9b1ee9835779">United Bank For Africa Plc</Bank>
+            <Bank id="40efcd77-f880-4e11-a3a0-b1ee1c1c7fa5">Unity Bank Plc</Bank>
+            <Bank id="6f9a1c85-9664-4b25-9e36-7dfcc8e69765">Wema Bank Plc</Bank>
+            <Bank id="58c1b5ba-5c9e-4fe8-ac67-72bbd0a3b6ec">Zenith Bank Plc</Bank>
+        </Banks>
+    </Result>
+</MyResult>

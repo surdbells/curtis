@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MyResult>
+<Result>
+    <Status>0</Status>
+    <Msg>successful</Msg>
+    <Retailers>
+        <Retailer id="784737EE-DD81-453A-BCCF-F283A36BCA30">9MOBILE</Retailer>
+        <Retailer id="5C2DE682-B2A3-4B31-BDAE-23CD547942E8">ARIK</Retailer>
+        <Retailer id="74B80C8C-8411-4D48-8B39-1C697B56EF60">DOMINO/COLDSTONE</Retailer>
+        <Retailer id="21729F22-35D9-49BB-A93E-180F351CA09E">EKO HOTEL</Retailer>
+        <Retailer id="59AD9DE5-6951-4D07-A518-E904BF7A6522">EMADEB ENERGY</Retailer>
+        <Retailer id="3A4C2341-3C6C-4D92-A541-07C55F8574C9">FATGBEMS</Retailer>
+        <Retailer id="B09A4D75-C89D-4340-9817-F596B5F9F96B">FORTE OIL</Retailer>
+        <Retailer id="EC43D046-F6C8-43A8-A854-03E04550D340">GAME</Retailer>
+        <Retailer id="1B8D3CB9-5F19-41D1-B4E6-3C100B5D28E6">HEYDEN</Retailer>
+        <Retailer id="D5980D38-F510-4BFE-AAF9-65F6A081036C">LUFTHANSA AIR</Retailer>
+        <Retailer id="EA0066A5-92D9-43C9-8D76-244A6861B42E">MAX AIRLINES</Retailer>
+        <Retailer id="C6CF978A-5D2F-4709-A319-31F7B3859C7F">MOBIL</Retailer>
+        <Retailer id="AE38985C-FB37-4D6F-8C42-6F2D11AEC46F">MR PRICE</Retailer>
+        <Retailer id="32BFEE4F-EC46-4DFB-89E2-17B50A4A4593">MR. BIGGS</Retailer>
+        <Retailer id="2D8A1121-CCCE-4A86-935D-220E3E0BA5B6">MULTICHOICE</Retailer>
+        <Retailer id="7A9BE7A6-4845-49D2-8BD3-2C80991AA459">NNPC</Retailer>
+        <Retailer id="8EA8A697-5332-4C88-87DA-B239BC2EEED0">NORTHWEST</Retailer>
+        <Retailer id="4E11D878-38D0-4151-B16D-CEDC376C0034">OANDO</Retailer>
+        <Retailer id="7B7A14C4-6447-4FAA-9044-9340B6468206">OMNIK</Retailer>
+        <Retailer id="D2916847-6DAD-4C34-B33B-D6E78CE823CA">ORIENTAL HOTEL</Retailer>
+        <Retailer id="AE4455E4-CEF3-46B8-B29E-F2AFEEE8D552">PARK and SHOP</Retailer>
+        <Retailer id="535D2636-3BA2-42D0-AF68-1C3A8B8B500C">PEPSTORES</Retailer>
+        <Retailer id="B085FC8D-DAAD-47C5-BCB1-CE656C6B967D">PETROLCAM</Retailer>
+        <Retailer id="5C0C41C5-7B03-4606-9747-328C826E2E50">PINNACLE OIL</Retailer>
+        <Retailer id="2ED4123A-E30F-4A58-A7E2-BD6A89D50D4A">PREMIER LOTTO</Retailer>
+        <Retailer id="90727E8C-7175-48EF-BA9F-C3E2DA8E43BD">PROPEL</Retailer>
+        <Retailer id="3019D4BE-4CB1-487C-A0C4-46A4332FD9E0">PROPETROL</Retailer>
+        <Retailer id="44DCDDFE-D663-4507-97A8-E8BAEBC4067C">S.B ABULE EGBA</Retailer>
+        <Retailer id="5453B04F-235D-4325-8955-3B3517195E34">SILVERBIRD</Retailer>
+        <Retailer id="CEA730E3-7F10-4A51-A41B-AAEF6E626001">SPAR</Retailer>
+        <Retailer id="423DD07B-E3E3-43E2-93EB-3A5E691D6D40">SPECTRANET</Retailer>
+        <Retailer id="754356B6-EEB6-4F74-B85C-39CC2591E60D">SUNDRY FOODS</Retailer>
+        <Retailer id="8659F3B2-161A-40D2-8C92-00CFC64A5266">TFC</Retailer>
+        <Retailer id="4EBDA3D8-884C-4D19-8846-3B77DDE0D902">TOTAL</Retailer>
+        <Retailer id="79AB109A-3C51-43D1-8E51-B68FD1BBDA99">YEREVAN OIL</Retailer>
+        <Retailer id="05DDA73C-88FE-4E27-BACC-3CAC121A8453">ZONE 4 ENERGY</Retailer>
+    </Retailers>
+</Result>
+</MyResult>
