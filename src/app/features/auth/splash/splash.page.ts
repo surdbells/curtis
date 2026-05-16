@@ -4,6 +4,7 @@ import { IonicModule } from '@ionic/angular';
 
 import { SessionStore } from '../../../core/stores/session.store';
 import { BiometricService } from '../../../core/services/biometric.service';
+import { PushService } from '../../../core/services/push.service';
 import { isExpired } from '../../../core/utils/jwt.util';
 
 @Component({
@@ -95,11 +96,18 @@ import { isExpired } from '../../../core/utils/jwt.util';
 export class SplashPage implements OnInit {
   private readonly session = inject(SessionStore);
   private readonly biometric = inject(BiometricService);
+  private readonly push = inject(PushService);
   private readonly router = inject(Router);
 
   async ngOnInit(): Promise<void> {
     await new Promise((r) => setTimeout(r, 500));
-    void this.router.navigateByUrl(await this.decideRoute(), { replaceUrl: true });
+    const target = await this.decideRoute();
+    if (target === '/dashboard') {
+      // Already authenticated — re-register for pushes so we pick up
+      // any token rotation from FCM/APNs since the last launch.
+      void this.push.register().catch(() => undefined);
+    }
+    void this.router.navigateByUrl(target, { replaceUrl: true });
   }
 
   private async decideRoute(): Promise<string> {

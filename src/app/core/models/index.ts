@@ -11,3 +11,4 @@ export * from './nigerian-states';
 export * from './retailer.model';
 export * from './seal.model';
 export * from './queued-request.model';
+export * from './push.model';

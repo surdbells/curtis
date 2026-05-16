@@ -9,6 +9,7 @@ import { Capacitor } from '@capacitor/core';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { TokenService } from '../../../core/services/token.service';
+import { PushService } from '../../../core/services/push.service';
 
 @Component({
   selector: 'curtis-login',
@@ -161,6 +162,7 @@ import { TokenService } from '../../../core/services/token.service';
 export class LoginPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly tokens = inject(TokenService);
+  private readonly push = inject(PushService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastController);
 
@@ -199,6 +201,9 @@ export class LoginPage implements OnInit {
       });
 
       await this.haptic(NotificationType.Success);
+      // Fire-and-forget push registration. Permission prompt may appear;
+      // login navigation is not blocked on the result.
+      void this.push.register().catch(() => undefined);
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (err) {
       await this.haptic(NotificationType.Error);
