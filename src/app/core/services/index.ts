@@ -2,6 +2,7 @@ export * from './api.service';
 export * from './action-builder.service';
 export * from './auth.service';
 export * from './bank.service';
+export * from './battery.service';
 export * from './biometric.service';
 export * from './camera.service';
 export * from './config.service';
