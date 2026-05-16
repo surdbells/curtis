@@ -43,31 +43,101 @@ import type { Bank, Branch } from '../../core/models';
   imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
-      .scanned-row {
-        display: flex; align-items: center; justify-content: space-between;
-        gap: 0.5rem; padding: 0.5rem 1rem;
-        border-bottom: 1px solid var(--ion-color-light-shade);
+      :host { display: block; }
+      ion-content { --background: var(--curtis-bg); }
+      ion-list { background: transparent; margin: 0 var(--curtis-space-3); }
+      ion-list[inset] ion-item {
+        --background: var(--curtis-surface-1);
+        --border-color: var(--curtis-border);
+        --min-height: 56px;
       }
-      .scanned-row code { font-size: 0.8rem; color: var(--ion-color-medium); }
-      .actions { padding: 1rem; display: grid; gap: 0.5rem; }
+      .section-label {
+        margin: var(--curtis-space-4) var(--curtis-space-5) var(--curtis-space-1);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        color: var(--curtis-text-subtle);
+        display: flex;
+        align-items: center;
+        gap: var(--curtis-space-2);
+      }
+      .section-label__chip {
+        background: color-mix(in srgb, var(--ion-color-success) 14%, transparent);
+        color: var(--green-600);
+        padding: 2px 8px;
+        border-radius: var(--curtis-radius-pill);
+        font-size: 10px;
+        font-weight: var(--curtis-weight-bold);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: var(--curtis-tracking-normal);
+        text-transform: none;
+      }
+
+      .seal-card {
+        margin: 0 var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+        overflow: hidden;
+      }
+      .seal-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--curtis-space-2);
+        padding: var(--curtis-space-2_5) var(--curtis-space-4);
+        border-bottom: 1px solid var(--curtis-border);
+      }
+      .seal-row:last-child { border-bottom: none; }
+      .seal-row code {
+        font-family: var(--curtis-font-mono);
+        font-size: var(--curtis-text-xs);
+        color: var(--curtis-text);
+        font-weight: var(--curtis-weight-semibold);
+      }
+      .seal-row ion-button { --padding-start: 0; --padding-end: 0; }
       .seals-empty {
-        text-align: center; padding: 1rem; color: var(--ion-color-medium); font-size: 0.85rem;
+        padding: var(--curtis-space-4);
+        text-align: center;
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text-muted);
+      }
+
+      .actions {
+        padding: var(--curtis-space-4) var(--curtis-space-4)
+                 calc(var(--curtis-space-8) + env(safe-area-inset-bottom, 0));
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-2);
       }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header [translucent]="true">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard" />
+          <ion-back-button defaultHref="/dashboard"></ion-back-button>
         </ion-buttons>
         <ion-title>Manual evacuation</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content [fullscreen]="true">
       <curtis-offline-banner />
 
+      <div class="curtis-form-strip">
+        <div class="curtis-form-strip__icon curtis-form-strip__icon--tertiary">
+          <curtis-icon name="document-text-outline" size="md" />
+        </div>
+        <div class="curtis-form-strip__text">
+          <div class="curtis-form-strip__title">Manual evacuation</div>
+          <div class="curtis-form-strip__sub">Pick origin and destination, scan seals, then submit.</div>
+        </div>
+      </div>
+
+      <div class="section-label">Origin</div>
       <ion-list inset>
         <ion-item>
           <ion-select
@@ -96,7 +166,10 @@ import type { Bank, Branch } from '../../core/models';
             }
           </ion-select>
         </ion-item>
+      </ion-list>
 
+      <div class="section-label">Destination</div>
+      <ion-list inset>
         <ion-item>
           <ion-select
             label="Destination bank"
@@ -124,7 +197,10 @@ import type { Bank, Branch } from '../../core/models';
             }
           </ion-select>
         </ion-item>
+      </ion-list>
 
+      <div class="section-label">Details</div>
+      <ion-list inset>
         <ion-item>
           <ion-input
             label="Processing type"
@@ -133,7 +209,6 @@ import type { Bank, Branch } from '../../core/models';
             [disabled]="submitting()"
           />
         </ion-item>
-
         <ion-item>
           <ion-textarea
             label="Note (optional)"
@@ -146,37 +221,39 @@ import type { Bank, Branch } from '../../core/models';
         </ion-item>
       </ion-list>
 
-      <ion-list-header>
-        <ion-label>
-          Seals
-          @if (sealIds().length > 0) {
-            <ion-chip color="success">{{ sealIds().length }}</ion-chip>
-          }
-        </ion-label>
-      </ion-list-header>
+      <div class="section-label">
+        Seals
+        @if (sealIds().length > 0) {
+          <span class="section-label__chip">{{ sealIds().length }}</span>
+        }
+      </div>
 
       @if (sealIds().length === 0) {
-        <div class="seals-empty">No seals scanned yet. Tap "Scan seals" to begin.</div>
+        <div class="seal-card">
+          <div class="seals-empty">No seals scanned yet. Tap "Scan seals" to begin.</div>
+        </div>
       } @else {
-        @for (id of sealIds(); track id) {
-          <div class="scanned-row">
-            <code>{{ id }}</code>
-            <ion-button fill="clear" size="small" color="medium" (click)="removeSeal(id)">
-              <curtis-icon slot="icon-only" name="close-circle-outline" />
-            </ion-button>
-          </div>
-        }
+        <div class="seal-card">
+          @for (id of sealIds(); track id) {
+            <div class="seal-row">
+              <code>{{ id }}</code>
+              <ion-button fill="clear" size="small" color="medium" (click)="removeSeal(id)">
+                <curtis-icon slot="icon-only" name="close-circle-outline" size="sm" />
+              </ion-button>
+            </div>
+          }
+        </div>
       }
 
       <div class="actions">
         @if (!scanning()) {
           <ion-button expand="block" fill="outline" (click)="startScan()" [disabled]="submitting()">
-            <curtis-icon slot="start" name="qr-code-outline" />
+            <curtis-icon slot="start" name="qr-code-outline" size="sm" />
             Scan seals
           </ion-button>
         } @else {
           <ion-button expand="block" color="medium" (click)="stopScan()">
-            <curtis-icon slot="start" name="close-outline" />
+            <curtis-icon slot="start" name="close-outline" size="sm" />
             Stop scanning
           </ion-button>
         }
@@ -189,6 +266,7 @@ import type { Bank, Branch } from '../../core/models';
             <ion-spinner slot="start" name="crescent" />
             Submitting…
           } @else {
+            <curtis-icon slot="start" name="cloud-upload-outline" size="sm" />
             Submit manual evacuation
           }
         </ion-button>

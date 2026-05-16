@@ -7,20 +7,18 @@ import { BiometricService } from '../../../core/services/biometric.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PushService } from '../../../core/services/push.service';
 import { OnboardingService } from '../../../core/services/onboarding.service';
-
-/**
- * Biometric unlock page.
- *
- * Prompts the user for fingerprint / Face ID, reads the stored credentials,
- * and silently re-authenticates via AuthService.login.
- *
- * NOTE: credential enrollment (writing the credentials in the first place)
- * will happen from a settings screen in a later phase. Until enrollment is
- * wired, this page is effectively unreachable — the splash only routes
- * here when stored credentials exist.
- */
 import { CurtisIconComponent } from '../../../shared/components/icon';
 
+/**
+ * Biometric unlock — Phase 9 premium design.
+ *
+ * Auto-fires the OS biometric prompt on entry. The agent sees a large
+ * pulsing fingerprint glyph centred on a navy-tinted backdrop, with
+ * inline action buttons. Failures keep the agent on the page so they
+ * can retry or fall back to password.
+ *
+ * Behavior is unchanged from Phase 8.
+ */
 @Component({
   selector: 'curtis-biometric-unlock',
   standalone: true,
@@ -28,52 +26,105 @@ import { CurtisIconComponent } from '../../../shared/components/icon';
   imports: [CommonModule, IonicModule, RouterLink, CurtisIconComponent],
   styles: [
     `
-      .wrap {
+      :host { display: block; height: 100%; }
+      ion-content { --background: var(--curtis-bg); }
+
+      .stage {
         height: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 1rem;
+        gap: var(--curtis-space-6);
+        padding: var(--curtis-space-6);
         text-align: center;
-        padding: 1.5rem;
       }
-      ion-icon.hero {
-        font-size: 4rem;
+
+      .glyph-wrap {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        display: grid;
+        place-items: center;
+        border-radius: var(--curtis-radius-pill);
+        background: color-mix(in srgb, var(--ion-color-primary) 8%, transparent);
+        animation: pulse 2.4s var(--curtis-ease-in-out) infinite;
+      }
+      .glyph-wrap::before {
+        content: '';
+        position: absolute;
+        inset: -8px;
+        border-radius: var(--curtis-radius-pill);
+        border: 1px solid color-mix(in srgb, var(--ion-color-primary) 20%, transparent);
+        animation: ring 2.4s var(--curtis-ease-in-out) infinite;
+      }
+      .glyph-wrap curtis-icon {
         color: var(--ion-color-primary);
       }
-      h2 {
+      @keyframes pulse {
+        0%, 100% { background: color-mix(in srgb, var(--ion-color-primary) 8%, transparent); }
+        50%      { background: color-mix(in srgb, var(--ion-color-primary) 14%, transparent); }
+      }
+      @keyframes ring {
+        0%, 100% { transform: scale(1); opacity: 0.6; }
+        50%      { transform: scale(1.12); opacity: 0.2; }
+      }
+
+      .title {
+        font-size: var(--curtis-text-xl);
+        font-weight: var(--curtis-weight-extrabold);
+        color: var(--curtis-text);
+        letter-spacing: var(--curtis-tracking-tight);
         margin: 0;
       }
-      p.sub {
-        color: var(--ion-color-medium);
+      .sub {
+        color: var(--curtis-text-muted);
+        font-size: var(--curtis-text-sm);
+        max-width: 24rem;
         margin: 0;
+        line-height: var(--curtis-leading-snug);
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-2);
+        width: 100%;
+        max-width: 320px;
+        margin-top: var(--curtis-space-4);
       }
     `,
   ],
   template: `
-    <ion-content>
-      <div class="wrap">
-        <curtis-icon class="hero" name="finger-print-outline" />
-        <h2>Unlock CurTIS</h2>
+    <ion-content [fullscreen]="true">
+      <div class="stage">
+        <div class="glyph-wrap">
+          <curtis-icon name="finger-print-outline" size="xl" [strokeWidth]="1.8" />
+        </div>
+
+        <h1 class="title">Unlock CurTIS</h1>
         <p class="sub">
           @if (working()) {
-            Authenticating…
+            Authenticating with your device biometric…
           } @else {
-            Confirm your identity to continue
+            Confirm your identity to continue your shift securely.
           }
         </p>
 
-        <ion-button [disabled]="working()" (click)="runUnlock()">
-          @if (working()) {
-            <ion-spinner slot="start" name="crescent" />
-          }
-          Try again
-        </ion-button>
-
-        <ion-button fill="outline" color="medium" routerLink="/login">
-          Use password instead
-        </ion-button>
+        <div class="actions">
+          <ion-button [disabled]="working()" (click)="runUnlock()">
+            @if (working()) {
+              <ion-spinner slot="start" name="crescent" />
+              Authenticating…
+            } @else {
+              <curtis-icon slot="start" name="finger-print-outline" size="sm" />
+              Try again
+            }
+          </ion-button>
+          <ion-button fill="clear" color="medium" routerLink="/login">
+            Use password instead
+          </ion-button>
+        </div>
       </div>
     </ion-content>
   `,
@@ -89,7 +140,6 @@ export class BiometricUnlockPage implements OnInit {
   protected readonly working = signal(false);
 
   async ngOnInit(): Promise<void> {
-    // Kick off the prompt automatically on entry.
     void this.runUnlock();
   }
 
@@ -108,24 +158,15 @@ export class BiometricUnlockPage implements OnInit {
 
       await new Promise<void>((resolve, reject) => {
         const sub = this.auth.login(creds.username, creds.password).subscribe({
-          next: () => {
-            resolve();
-            sub.unsubscribe();
-          },
-          error: (err) => {
-            reject(err);
-            sub.unsubscribe();
-          },
+          next: () => { resolve(); sub.unsubscribe(); },
+          error: (err) => { reject(err); sub.unsubscribe(); },
         });
       });
 
-      // Fire-and-forget push registration after a silent re-auth.
       void this.push.register().catch(() => undefined);
       const target = this.onboarding.completed() ? '/dashboard' : '/onboarding';
       await this.router.navigateByUrl(target, { replaceUrl: true });
     } catch {
-      // Biometric cancel, failure, or silent login failure — stay on page so
-      // the user can retry or fall back to password.
       await this.showToast('Could not unlock. Try again or use your password.', 'danger');
     } finally {
       this.working.set(false);
@@ -134,10 +175,7 @@ export class BiometricUnlockPage implements OnInit {
 
   private async showToast(message: string, color: 'danger' | 'warning' | 'success') {
     const t = await this.toast.create({
-      message,
-      duration: 3000,
-      position: 'top',
-      color,
+      message, duration: 3000, position: 'top', color,
       buttons: [{ icon: 'close', role: 'cancel' }],
     });
     await t.present();

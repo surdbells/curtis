@@ -44,30 +44,88 @@ import type { Bank, Branch } from '../../core/models';
   imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent],
   styles: [
     `
-      .section-note {
-        color: var(--ion-color-medium);
-        font-size: 0.8rem;
-        padding: 0 1rem 0.5rem;
+      :host { display: block; }
+      ion-content { --background: var(--curtis-bg); }
+
+      .header-strip {
+        margin: var(--curtis-space-3) var(--curtis-space-4);
+        padding: var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+        display: flex;
+        align-items: center;
+        gap: var(--curtis-space-3);
+      }
+      .header-strip__icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--curtis-radius-md);
+        background: var(--curtis-gradient-primary);
+        color: var(--ion-color-tertiary);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        font-weight: var(--curtis-weight-bold);
+      }
+      .header-strip__text { flex: 1; }
+      .header-strip__title {
+        font-size: var(--curtis-text-md);
+        font-weight: var(--curtis-weight-bold);
+        color: var(--curtis-text);
+      }
+      .header-strip__sub {
+        font-size: var(--curtis-text-xs);
+        color: var(--curtis-text-muted);
+      }
+
+      .section-label {
+        margin: var(--curtis-space-4) var(--curtis-space-5) var(--curtis-space-1);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        color: var(--curtis-text-subtle);
+      }
+
+      ion-list {
+        background: transparent;
+        margin: 0 var(--curtis-space-3);
+      }
+      ion-list[inset] ion-item {
+        --background: var(--curtis-surface-1);
+        --border-color: var(--curtis-border);
+        --min-height: 56px;
+      }
+
+      .submit {
+        padding: var(--curtis-space-5) var(--curtis-space-4) calc(var(--curtis-space-8) + env(safe-area-inset-bottom, 0));
       }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header [translucent]="true">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/daily" />
+          <ion-back-button defaultHref="/daily"></ion-back-button>
         </ion-buttons>
         <ion-title>Delivery</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content [fullscreen]="true">
       <curtis-offline-banner />
 
-      <p class="section-note">
-        Select the bank and branch for this delivery, then check in.
-      </p>
+      <div class="header-strip">
+        <div class="header-strip__icon">1</div>
+        <div class="header-strip__text">
+          <div class="header-strip__title">Check in at this stop</div>
+          <div class="header-strip__sub">Select bank and branch to register your arrival.</div>
+        </div>
+      </div>
 
+      <div class="section-label">Stop details</div>
       <ion-list inset>
         <ion-item>
           <ion-select
@@ -132,7 +190,7 @@ import type { Bank, Branch } from '../../core/models';
         </ion-item>
       </ion-list>
 
-      <div class="ion-padding">
+      <div class="submit">
         <ion-button
           expand="block"
           [disabled]="!canCheckIn() || submitting()"

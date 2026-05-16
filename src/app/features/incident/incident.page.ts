@@ -48,108 +48,201 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
     `
       :host { display: block; }
       ion-content { --background: var(--curtis-bg); }
+      ion-list { background: transparent; margin: 0 var(--curtis-space-3); }
+      ion-list[inset] ion-item {
+        --background: var(--curtis-surface-1);
+        --border-color: var(--curtis-border);
+        --min-height: 56px;
+      }
+      .section-label {
+        margin: var(--curtis-space-4) var(--curtis-space-5) var(--curtis-space-1);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        color: var(--curtis-text-subtle);
+      }
 
       .sos-banner {
-        margin: 0.75rem;
-        padding: 0.85rem 1rem;
+        margin: var(--curtis-space-3) var(--curtis-space-4);
+        padding: var(--curtis-space-4);
+        border-radius: var(--curtis-radius-lg);
+        background: color-mix(in srgb, var(--ion-color-danger) 14%, transparent);
+        color: var(--red-600);
+        border: 1px solid color-mix(in srgb, var(--ion-color-danger) 30%, transparent);
+        display: flex;
+        gap: var(--curtis-space-3);
+        align-items: center;
+        font-weight: var(--curtis-weight-semibold);
+        font-size: var(--curtis-text-sm);
+      }
+      .sos-banner__icon {
+        width: 36px;
+        height: 36px;
         border-radius: var(--curtis-radius-md);
-        background: var(--ion-color-danger);
-        color: var(--ion-color-danger-contrast);
-        display: flex; align-items: center; gap: 0.5rem;
-        font-weight: 600;
+        background: var(--red-500);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        animation: pulse-red 1.6s var(--curtis-ease-in-out) infinite;
+      }
+      @keyframes pulse-red {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+        50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
       }
 
       .severity-row {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 0.4rem;
-        padding: 0 1rem 0.5rem;
+        gap: var(--curtis-space-2);
+        margin: 0 var(--curtis-space-4);
       }
       .sev-btn {
-        padding: 0.5rem 0.4rem;
-        border-radius: var(--curtis-radius-sm);
+        padding: var(--curtis-space-3) var(--curtis-space-1);
+        border-radius: var(--curtis-radius-md);
         border: 1px solid var(--curtis-border);
         background: var(--curtis-surface-1);
-        color: var(--curtis-text);
-        font-weight: 600; font-size: 0.78rem;
+        color: var(--curtis-text-muted);
+        font-family: var(--curtis-font-sans);
+        font-weight: var(--curtis-weight-semibold);
+        font-size: var(--curtis-text-xs);
+        letter-spacing: var(--curtis-tracking-wide);
+        text-transform: uppercase;
         text-align: center;
-        transition: transform 100ms ease-out;
+        cursor: pointer;
+        transition: all var(--curtis-duration-fast) var(--curtis-ease-out);
+      }
+      .sev-btn:hover:not(.selected) {
+        border-color: var(--curtis-border-strong);
+        color: var(--curtis-text);
       }
       .sev-btn:active { transform: scale(0.97); }
       .sev-btn.selected {
         border-color: transparent;
-        color: var(--ion-color-primary-contrast);
+        color: #fff;
+        box-shadow: var(--curtis-shadow-sm);
       }
-      .sev-btn.selected.low      { background: var(--ion-color-medium); }
-      .sev-btn.selected.medium   { background: var(--ion-color-warning); color: var(--ion-color-warning-contrast); }
-      .sev-btn.selected.high     { background: var(--ion-color-danger);  color: var(--ion-color-danger-contrast); }
+      .sev-btn.selected.low      { background: var(--slate-500); }
+      .sev-btn.selected.medium   { background: var(--amber-500); color: #1A1A1A; }
+      .sev-btn.selected.high     { background: var(--red-500); }
       .sev-btn.selected.critical {
-        background: var(--ion-color-danger);
-        color: var(--ion-color-danger-contrast);
-        box-shadow: 0 0 0 2px var(--ion-color-danger);
+        background: var(--red-600);
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3), var(--curtis-shadow-sm);
       }
 
       .photo {
-        margin: 0.75rem;
-        border-radius: var(--curtis-radius-md);
+        margin: 0 var(--curtis-space-4);
+        border-radius: var(--curtis-radius-lg);
         background: var(--curtis-surface-1);
         border: 1px solid var(--curtis-border);
+        box-shadow: var(--curtis-shadow-xs);
         overflow: hidden;
         min-height: 200px;
-        display: flex; align-items: center; justify-content: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
-      .photo img { width: 100%; display: block; }
+      .photo img { width: 100%; display: block; object-fit: cover; }
       .photo .placeholder {
-        color: var(--curtis-text-subtle); text-align: center; padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-2);
+        align-items: center;
+        padding: var(--curtis-space-6);
+        text-align: center;
       }
-
-      .req-list {
-        margin: 0.75rem;
-        padding: 0.75rem 1rem;
-        border-radius: var(--curtis-radius-md);
-        background: var(--curtis-surface-1);
-        border: 1px solid var(--curtis-border);
-        font-size: 0.85rem;
+      .photo .placeholder__well {
+        width: 64px;
+        height: 64px;
+        border-radius: var(--curtis-radius-xl);
+        background: color-mix(in srgb, var(--ion-color-danger) 12%, transparent);
+        color: var(--red-500);
+        display: grid;
+        place-items: center;
       }
-      .req-list .req {
-        display: flex; align-items: center; gap: 0.5rem;
-        padding: 0.25rem 0;
+      .photo .placeholder__text {
+        font-size: var(--curtis-text-sm);
         color: var(--curtis-text-muted);
       }
-      .req-list .req.met { color: var(--ion-color-success); }
-      .req-list .req ion-icon { font-size: 1.1rem; }
 
-      .actions { padding: 1rem; display: grid; gap: 0.5rem; }
+      .capture-row {
+        margin: var(--curtis-space-3) var(--curtis-space-4) 0;
+      }
 
       .stamp {
-        font-size: 0.72rem;
+        margin: var(--curtis-space-2) var(--curtis-space-5) 0;
+        font-size: var(--curtis-text-xs);
         color: var(--curtis-text-subtle);
-        padding: 0 1rem;
-        margin-bottom: 0.5rem;
         font-variant-numeric: tabular-nums;
+        display: flex;
+        align-items: center;
+        gap: var(--curtis-space-1);
+      }
+      .stamp--warn { color: var(--amber-500); }
+
+      .req-list {
+        margin: var(--curtis-space-3) var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+        padding: var(--curtis-space-3) var(--curtis-space-4);
+      }
+      .req {
+        display: flex;
+        align-items: center;
+        gap: var(--curtis-space-2);
+        padding: var(--curtis-space-1_5) 0;
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text-muted);
+      }
+      .req curtis-icon { color: var(--curtis-text-faint); }
+      .req.met { color: var(--curtis-text); }
+      .req.met curtis-icon { color: var(--green-600); }
+
+      .actions {
+        padding: var(--curtis-space-4) var(--curtis-space-4)
+                 calc(var(--curtis-space-8) + env(safe-area-inset-bottom, 0));
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-2);
       }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header [translucent]="true">
       <ion-toolbar [color]="sosMode() ? 'danger' : undefined">
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard" />
+          <ion-back-button defaultHref="/dashboard"></ion-back-button>
         </ion-buttons>
         <ion-title>{{ sosMode() ? 'SOS — Report incident' : 'Report incident' }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content [fullscreen]="true">
       <curtis-offline-banner />
 
       @if (sosMode()) {
         <div class="sos-banner">
-          <curtis-icon name="warning" />
-          High-priority incident pre-filled — confirm details and submit.
+          <div class="sos-banner__icon">
+            <curtis-icon name="warning" size="sm" />
+          </div>
+          <div>High-priority incident pre-filled — confirm details and submit.</div>
+        </div>
+      } @else {
+        <div class="curtis-form-strip">
+          <div class="curtis-form-strip__icon curtis-form-strip__icon--danger">
+            <curtis-icon name="alert-circle-outline" size="md" />
+          </div>
+          <div class="curtis-form-strip__text">
+            <div class="curtis-form-strip__title">Report an incident</div>
+            <div class="curtis-form-strip__sub">Capture type, severity, and photo. Location is auto-attached.</div>
+          </div>
         </div>
       }
 
+      <div class="section-label">Incident type</div>
       <ion-list inset>
         <ion-item>
           <ion-select
@@ -167,6 +260,7 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
         </ion-item>
       </ion-list>
 
+      <div class="section-label">Severity</div>
       <div class="severity-row">
         @for (s of severities; track s.id) {
           <button
@@ -185,6 +279,7 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
         }
       </div>
 
+      <div class="section-label">Description</div>
       <ion-list inset>
         <ion-item>
           <ion-textarea
@@ -199,25 +294,31 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
         </ion-item>
       </ion-list>
 
+      <div class="section-label">Photo evidence</div>
       <div class="photo">
         @if (imageBase64()) {
           <img [src]="'data:image/jpeg;base64,' + imageBase64()" alt="Incident photo" />
         } @else {
           <div class="placeholder">
-            <curtis-icon name="camera-outline" style="font-size: 3rem;" />
-            <p>Photo required — tap below to capture</p>
+            <div class="placeholder__well">
+              <curtis-icon name="camera-outline" size="lg" [strokeWidth]="1.5" />
+            </div>
+            <div class="placeholder__text">Photo required — tap below to capture</div>
           </div>
         }
       </div>
 
-      <ion-button expand="block" fill="outline" style="margin: 0 1rem;" (click)="capture()" [disabled]="submitting()">
-        <curtis-icon slot="start" name="camera-outline" />
-        {{ imageBase64() ? 'Retake' : 'Capture' }} photo
-      </ion-button>
+      <div class="capture-row">
+        <ion-button expand="block" fill="outline" (click)="capture()" [disabled]="submitting()">
+          <curtis-icon slot="start" name="camera-outline" size="sm" />
+          {{ imageBase64() ? 'Retake' : 'Capture' }} photo
+        </ion-button>
+      </div>
 
       @if (locationFix(); as fix) {
-        <div class="stamp" style="margin-top: 0.5rem;">
-          <curtis-icon name="location-outline" /> {{ fix.latitude.toFixed(5) }}, {{ fix.longitude.toFixed(5) }}
+        <div class="stamp">
+          <curtis-icon name="location-outline" size="xs" />
+          {{ fix.latitude.toFixed(5) }}, {{ fix.longitude.toFixed(5) }}
           @if (fix.accuracy) {
             · ±{{ fix.accuracy.toFixed(0) }}m
           }
@@ -225,30 +326,32 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
       } @else if (locationLoading()) {
         <div class="stamp"><ion-spinner name="dots" /> Acquiring location…</div>
       } @else {
-        <div class="stamp" style="color: var(--ion-color-warning);">
-          <curtis-icon name="alert-circle-outline" /> Location unavailable — required
+        <div class="stamp stamp--warn">
+          <curtis-icon name="alert-circle-outline" size="xs" />
+          Location unavailable — required
         </div>
       }
 
+      <div class="section-label">Submission checklist</div>
       <div class="req-list">
         <div class="req" [class.met]="!!typeId">
-          <curtis-icon [name]="typeId ? 'checkmark-circle' : 'ellipse-outline'" />
+          <curtis-icon [name]="typeId ? 'checkmark-circle' : 'ellipse-outline'" size="sm" />
           Type selected
         </div>
         <div class="req" [class.met]="!!severity">
-          <curtis-icon [name]="severity ? 'checkmark-circle' : 'ellipse-outline'" />
+          <curtis-icon [name]="severity ? 'checkmark-circle' : 'ellipse-outline'" size="sm" />
           Severity selected
         </div>
         <div class="req" [class.met]="note.trim().length > 0">
-          <curtis-icon [name]="note.trim().length > 0 ? 'checkmark-circle' : 'ellipse-outline'" />
+          <curtis-icon [name]="note.trim().length > 0 ? 'checkmark-circle' : 'ellipse-outline'" size="sm" />
           Description added
         </div>
         <div class="req" [class.met]="!!imageBase64()">
-          <curtis-icon [name]="imageBase64() ? 'checkmark-circle' : 'ellipse-outline'" />
+          <curtis-icon [name]="imageBase64() ? 'checkmark-circle' : 'ellipse-outline'" size="sm" />
           Photo captured
         </div>
         <div class="req" [class.met]="!!locationFix()">
-          <curtis-icon [name]="locationFix() ? 'checkmark-circle' : 'ellipse-outline'" />
+          <curtis-icon [name]="locationFix() ? 'checkmark-circle' : 'ellipse-outline'" size="sm" />
           Location available
         </div>
       </div>
@@ -264,7 +367,7 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
             <ion-spinner slot="start" name="crescent" />
             Sending…
           } @else {
-            <curtis-icon slot="start" name="send" />
+            <curtis-icon slot="start" name="send" size="sm" />
             Submit incident
           }
         </ion-button>

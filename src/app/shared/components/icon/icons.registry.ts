@@ -6,6 +6,8 @@ import {
   Building2,
   Camera,
   CheckCircle2,
+  CheckCircle,
+  Circle,
   ChevronRight,
   XCircle,
   X,
@@ -137,6 +139,10 @@ export const ICON_REGISTRY = {
   'pulse-outline':            Activity,
   'power-outline':            Power,
   'ellipsis-horizontal':      MoreHorizontal,
+
+  // Filled / state checklist icons (used in incident report requirements list)
+  'checkmark-circle':         CheckCircle,
+  'ellipse-outline':          Circle,
 } as const satisfies Record<string, LucideIconData>;
 
 /** All valid icon names — compile-time enforcement everywhere a name is used. */

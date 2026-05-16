@@ -26,44 +26,64 @@ import { CurtisIconComponent } from '../../shared/components/icon';
   imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
-      .note {
-        padding: 0 1rem;
-        color: var(--ion-color-medium);
-        font-size: 0.85rem;
+      :host { display: block; }
+      ion-content { --background: var(--curtis-bg); }
+      ion-list { background: transparent; margin: 0 var(--curtis-space-3); }
+      ion-list[inset] ion-item {
+        --background: var(--curtis-surface-1);
+        --border-color: var(--curtis-border);
+        --min-height: 56px;
+      }
+      .section-label {
+        margin: var(--curtis-space-4) var(--curtis-space-5) var(--curtis-space-1);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        color: var(--curtis-text-subtle);
       }
       .warning {
-        margin: 0.75rem 1rem;
-        padding: 0.9rem 1rem;
-        border-radius: 10px;
-        background: var(--ion-color-warning);
-        color: var(--ion-color-warning-contrast);
-        font-size: 0.85rem;
+        margin: var(--curtis-space-3) var(--curtis-space-4);
+        padding: var(--curtis-space-3) var(--curtis-space-4);
+        background: color-mix(in srgb, var(--ion-color-warning) 14%, transparent);
+        color: var(--amber-500);
+        border: 1px solid color-mix(in srgb, var(--ion-color-warning) 30%, transparent);
+        border-radius: var(--curtis-radius-md);
+        font-size: var(--curtis-text-sm);
+        display: flex;
+        gap: var(--curtis-space-2);
+        align-items: center;
       }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header [translucent]="true">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/delivery" />
+          <ion-back-button defaultHref="/delivery"></ion-back-button>
         </ion-buttons>
         <ion-title>Process</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content [fullscreen]="true">
       <curtis-offline-banner />
 
       @if (!deliveryStore.isCheckedIn()) {
         <div class="warning">
-          <curtis-icon name="warning-outline" /> Not checked in. Return and check in first.
+          <curtis-icon name="warning-outline" size="sm" />
+          Not checked in. Return and check in first.
         </div>
       } @else {
-        <p class="note">
-          Record the processing details for this delivery, then continue to
-          capture the teller signature.
-        </p>
+        <div class="curtis-form-strip">
+          <div class="curtis-form-strip__icon">2</div>
+          <div class="curtis-form-strip__text">
+            <div class="curtis-form-strip__title">Record processing details</div>
+            <div class="curtis-form-strip__sub">Capture seals and process type, then continue to signature.</div>
+          </div>
+        </div>
 
+        <div class="section-label">Processing</div>
         <ion-list inset>
           <ion-item>
             <ion-input
@@ -102,13 +122,14 @@ import { CurtisIconComponent } from '../../shared/components/icon';
           </ion-item>
         </ion-list>
 
-        <div class="ion-padding">
+        <div class="curtis-submit-zone">
           <ion-button expand="block" [disabled]="submitting()" (click)="submit()">
             @if (submitting()) {
               <ion-spinner slot="start" name="crescent" />
               Recording…
             } @else {
               Save & continue
+              <curtis-icon slot="end" name="arrow-forward-outline" size="sm" />
             }
           </ion-button>
         </div>

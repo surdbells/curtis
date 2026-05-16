@@ -23,23 +23,25 @@ import { OfflineQueueService } from '../../core/services/offline-queue.service';
 import { TruckStore } from '../../core/stores/truck.store';
 import { RouteStore } from '../../core/stores/route.store';
 import { ErrorReportingService } from '../../core/services/error-reporting.service';
-
-/**
- * Settings page — Phase 8 Commit 4.
- *
- * Surfaces:
- *   - Profile: user identity and log-out.
- *   - Theme: system / light / dark override.
- *   - GPS: ping interval slider (15s..5min).
- *   - Notifications: push permission + registration status, retry CTA.
- *   - Diagnostics: app version, env, device info, queue counts, push token.
- *   - Battery (Android): re-open settings, reset onboarding.
- *   - About: brand attribution, error-reporting status.
- *
- * Routed at /settings, auth-guarded only.
- */
 import { CurtisIconComponent } from '../../shared/components/icon';
 
+/**
+ * Settings — Phase 9 premium redesign.
+ *
+ * Sections (top-down):
+ *   1. Profile — user identity, truck/route summary, sign-out
+ *   2. Appearance — theme override segment with effective scheme below
+ *   3. Location tracking — GPS interval slider with live readout
+ *   4. Notifications — permission/registration status, re-register
+ *   5. Background activity (Android) — battery exemption + re-show onboarding
+ *   6. Diagnostics — version, env, device, queue, error reporting + copy
+ *   7. Brand signature footer
+ *
+ * Each section uses the new .curtis-card-list pattern: a navy-tinted
+ * label above a card containing kv-rows + actions.
+ *
+ * Behavior is preserved from Phase 8.
+ */
 @Component({
   selector: 'curtis-settings',
   standalone: true,
@@ -49,303 +51,350 @@ import { CurtisIconComponent } from '../../shared/components/icon';
     `
       :host { display: block; }
       ion-content { --background: var(--curtis-bg); }
-      ion-list { background: transparent; }
 
-      .section-header {
-        margin: 1.25rem 1rem 0.4rem;
-        font-size: 0.72rem; font-weight: 700;
-        letter-spacing: 0.08em; text-transform: uppercase;
+      .stage {
+        padding: 0 var(--curtis-space-3) calc(var(--curtis-space-12) + env(safe-area-inset-bottom, 0));
+      }
+
+      .section-label {
+        margin: var(--curtis-space-5) var(--curtis-space-2) var(--curtis-space-2);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
         color: var(--curtis-text-subtle);
       }
 
-      .card-list {
-        margin: 0 0.75rem;
+      .card {
         background: var(--curtis-surface-1);
         border: 1px solid var(--curtis-border);
-        border-radius: var(--curtis-radius-md);
-        box-shadow: var(--curtis-shadow-sm);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
         overflow: hidden;
       }
-      .card-list ion-item {
-        --background: transparent;
-        --border-color: var(--curtis-border);
-      }
-      .card-list ion-item:last-child { --border-color: transparent; }
 
-      .kv-row {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 0.7rem 1rem;
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--curtis-space-3);
+        padding: var(--curtis-space-3_5) var(--curtis-space-4);
+        padding: 0.75rem 1rem;
         border-bottom: 1px solid var(--curtis-border);
-        gap: 0.5rem;
+        min-height: 52px;
       }
-      .kv-row:last-child { border-bottom: none; }
-      .kv-row .key {
-        font-size: 0.85rem;
+      .row:last-child { border-bottom: none; }
+      .row__key {
+        font-size: var(--curtis-text-sm);
         color: var(--curtis-text-muted);
+        font-weight: var(--curtis-weight-medium);
       }
-      .kv-row .value {
-        font-weight: 600;
-        font-size: 0.85rem;
+      .row__value {
+        font-size: var(--curtis-text-sm);
+        font-weight: var(--curtis-weight-semibold);
+        color: var(--curtis-text);
+        font-variant-numeric: tabular-nums;
         text-align: right;
         max-width: 60%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        color: var(--curtis-text);
+      }
+      .row__value.mono {
+        font-family: var(--curtis-font-mono);
+        font-size: var(--curtis-text-xs);
+      }
+      .row__value.ok   { color: var(--green-600); }
+      .row__value.warn { color: var(--amber-500); }
+      .row__value.bad  { color: var(--red-500); }
+
+      .seg-row { padding: var(--curtis-space-3) var(--curtis-space-3); }
+      .seg-row ion-segment-button curtis-icon { margin-bottom: 2px; }
+
+      .slider-row { padding: var(--curtis-space-4); }
+      .slider-row__head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: var(--curtis-space-2);
+      }
+      .slider-row__head .label {
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text-muted);
+        font-weight: var(--curtis-weight-medium);
+      }
+      .slider-row__head .val {
+        font-size: var(--curtis-text-lg);
+        font-weight: var(--curtis-weight-bold);
         font-variant-numeric: tabular-nums;
+        color: var(--curtis-text);
       }
-      .kv-row .value.mono {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 0.78rem;
-      }
-      .kv-row .value.ok      { color: var(--ion-color-success-shade); }
-      .kv-row .value.warn    { color: var(--ion-color-warning-shade); }
-      .kv-row .value.bad     { color: var(--ion-color-danger); }
-
-      .seg-wrap { padding: 0.6rem 0.75rem; }
-      ion-segment { --background: var(--curtis-surface-2); border-radius: var(--curtis-radius-pill); }
-
-      .slider-row { padding: 0.6rem 1rem; }
-      .slider-row ion-range { --bar-background: var(--curtis-border); }
-      .slider-meta {
-        display: flex; justify-content: space-between;
-        font-size: 0.72rem;
+      .slider-row__meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: var(--curtis-text-xs);
         color: var(--curtis-text-subtle);
-        padding: 0 0.3rem;
+        margin-top: var(--curtis-space-1);
       }
 
-      .actions-row { padding: 0.7rem 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
-      .actions-row ion-button { --border-radius: 8px; height: 34px; font-size: 0.82rem; }
+      .actions {
+        padding: var(--curtis-space-2) var(--curtis-space-4) var(--curtis-space-3);
+        display: flex;
+        gap: var(--curtis-space-2);
+        flex-wrap: wrap;
+      }
+      .actions ion-button {
+        --border-radius: var(--curtis-radius-md);
+        min-height: 36px;
+        font-size: var(--curtis-text-sm);
+        --padding-top: 0.45rem;
+        --padding-bottom: 0.45rem;
+      }
 
+      /* Footer brand signature */
       .footer {
-        padding: 2rem 1rem 1rem;
+        margin-top: var(--curtis-space-12);
         text-align: center;
         color: var(--curtis-text-subtle);
-        font-size: 0.72rem;
       }
-      .footer .brand {
-        font-weight: 700; letter-spacing: 0.16em; color: var(--curtis-text-muted);
+      .footer__brand {
+        font-size: var(--curtis-text-base);
+        font-weight: var(--curtis-weight-extrabold);
+        letter-spacing: var(--curtis-tracking-widest);
+        color: var(--curtis-text-muted);
+      }
+      .footer__sub {
+        margin-top: var(--curtis-space-1);
+        font-size: var(--curtis-text-xs);
+      }
+      .footer__version {
+        margin-top: var(--curtis-space-2);
+        font-size: var(--curtis-text-xs);
+        font-variant-numeric: tabular-nums;
       }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header [translucent]="true">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard" />
+          <ion-back-button defaultHref="/dashboard"></ion-back-button>
         </ion-buttons>
         <ion-title>Settings</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
-      <!-- =================== Profile =================== -->
-      <div class="section-header">Profile</div>
-      <div class="card-list">
-        @if (session.user(); as u) {
-          <div class="kv-row">
-            <span class="key">Signed in as</span>
-            <span class="value">{{ u.email || u.id }}</span>
-          </div>
-          <div class="kv-row">
-            <span class="key">User ID</span>
-            <span class="value mono">{{ short(u.id) }}</span>
-          </div>
-        } @else {
-          <div class="kv-row">
-            <span class="key">Status</span>
-            <span class="value bad">Not signed in</span>
-          </div>
-        }
-        @if (truck.truck(); as t) {
-          <div class="kv-row">
-            <span class="key">Truck</span>
-            <span class="value">{{ t.plate || t.id }}</span>
-          </div>
-        }
-        @if (route.route(); as r) {
-          <div class="kv-row">
-            <span class="key">Route</span>
-            <span class="value">{{ r.name || r.id }}</span>
-          </div>
-        }
-        <div class="actions-row">
-          <ion-button color="danger" fill="outline" size="small" (click)="confirmLogout()">
-            <curtis-icon slot="start" name="log-out-outline" />
-            Sign out
-          </ion-button>
-        </div>
-      </div>
-
-      <!-- =================== Appearance =================== -->
-      <div class="section-header">Appearance</div>
-      <div class="card-list">
-        <div class="seg-wrap">
-          <ion-segment
-            [value]="theme.preference()"
-            (ionChange)="onThemeChange($event)"
-          >
-            <ion-segment-button value="system">
-              <curtis-icon name="phone-portrait-outline" />
-              <ion-label>System</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="light">
-              <curtis-icon name="sunny-outline" />
-              <ion-label>Light</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="dark">
-              <curtis-icon name="moon-outline" />
-              <ion-label>Dark</ion-label>
-            </ion-segment-button>
-          </ion-segment>
-        </div>
-        <div class="kv-row">
-          <span class="key">Current</span>
-          <span class="value">{{ theme.scheme() }}</span>
-        </div>
-      </div>
-
-      <!-- =================== Tracking =================== -->
-      <div class="section-header">Location tracking</div>
-      <div class="card-list">
-        <div class="slider-row">
-          <div class="kv-row" style="padding: 0; border: none;">
-            <span class="key">GPS ping interval</span>
-            <span class="value">{{ intervalSec() }} s</span>
-          </div>
-          <ion-range
-            [min]="config.gpsIntervalMin"
-            [max]="config.gpsIntervalMax"
-            [step]="5000"
-            snaps="true"
-            [(ngModel)]="intervalMs"
-            (ionChange)="onIntervalChange()"
-          />
-          <div class="slider-meta">
-            <span>15s (high res, more battery)</span>
-            <span>5m (low res, save battery)</span>
-          </div>
-        </div>
-        <div class="actions-row">
-          <ion-button fill="clear" size="small" (click)="resetInterval()">
-            <curtis-icon slot="start" name="refresh-outline" />
-            Reset to default
-          </ion-button>
-        </div>
-      </div>
-
-      <!-- =================== Notifications =================== -->
-      <div class="section-header">Notifications</div>
-      <div class="card-list">
-        <div class="kv-row">
-          <span class="key">Permission</span>
-          <span
-            class="value"
-            [class.ok]="push.permission() === 'granted'"
-            [class.bad]="push.permission() === 'denied'"
-            [class.warn]="push.permission() === 'unknown'"
-          >
-            {{ push.permission() }}
-          </span>
-        </div>
-        <div class="kv-row">
-          <span class="key">Registered</span>
-          <span class="value" [class.ok]="push.registered()" [class.bad]="!push.registered()">
-            {{ push.registered() ? 'Yes' : 'No' }}
-          </span>
-        </div>
-        @if (push.token(); as t) {
-          <div class="kv-row">
-            <span class="key">Token</span>
-            <span class="value mono">{{ short(t) }}</span>
-          </div>
-        }
-        <div class="actions-row">
-          <ion-button size="small" fill="outline" (click)="reregister()">
-            <curtis-icon slot="start" name="cloud-upload-outline" />
-            Re-register
-          </ion-button>
-        </div>
-      </div>
-
-      <!-- =================== Battery (Android only) =================== -->
-      @if (isAndroid()) {
-        <div class="section-header">Background activity</div>
-        <div class="card-list">
-          <div class="kv-row">
-            <span class="key">Battery optimisation</span>
-            <span class="value">Managed by Android</span>
-          </div>
-          <div class="actions-row">
-            <ion-button size="small" fill="outline" (click)="openBatterySettings()">
-              <curtis-icon slot="start" name="battery-charging-outline" />
-              Open battery settings
-            </ion-button>
-            <ion-button size="small" fill="clear" color="medium" (click)="reopenOnboarding()">
-              <curtis-icon slot="start" name="information-circle-outline" />
-              Show onboarding again
+    <ion-content [fullscreen]="true">
+      <div class="stage">
+        <!-- Profile -->
+        <div class="section-label">Profile</div>
+        <div class="card">
+          @if (session.user(); as u) {
+            <div class="row">
+              <span class="row__key">Signed in as</span>
+              <span class="row__value">{{ u.email || u.id }}</span>
+            </div>
+            <div class="row">
+              <span class="row__key">User ID</span>
+              <span class="row__value mono">{{ short(u.id) }}</span>
+            </div>
+          } @else {
+            <div class="row">
+              <span class="row__key">Status</span>
+              <span class="row__value bad">Not signed in</span>
+            </div>
+          }
+          @if (truck.truck(); as t) {
+            <div class="row">
+              <span class="row__key">Truck</span>
+              <span class="row__value">{{ t.plate || t.id }}</span>
+            </div>
+          }
+          @if (route.route(); as r) {
+            <div class="row">
+              <span class="row__key">Route</span>
+              <span class="row__value">{{ r.name || r.id }}</span>
+            </div>
+          }
+          <div class="actions">
+            <ion-button color="danger" fill="outline" (click)="confirmLogout()">
+              <curtis-icon slot="start" name="log-out-outline" size="sm" />
+              Sign out
             </ion-button>
           </div>
         </div>
-      }
 
-      <!-- =================== Diagnostics =================== -->
-      <div class="section-header">Diagnostics</div>
-      <div class="card-list">
-        <div class="kv-row">
-          <span class="key">Version</span>
-          <span class="value mono">{{ version }}</span>
+        <!-- Appearance -->
+        <div class="section-label">Appearance</div>
+        <div class="card">
+          <div class="seg-row">
+            <ion-segment [value]="theme.preference()" (ionChange)="onThemeChange($event)">
+              <ion-segment-button value="system">
+                <curtis-icon name="phone-portrait-outline" size="sm" />
+                <ion-label>System</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="light">
+                <curtis-icon name="sunny-outline" size="sm" />
+                <ion-label>Light</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="dark">
+                <curtis-icon name="moon-outline" size="sm" />
+                <ion-label>Dark</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+          </div>
+          <div class="row">
+            <span class="row__key">Current scheme</span>
+            <span class="row__value">{{ theme.scheme() }}</span>
+          </div>
         </div>
-        <div class="kv-row">
-          <span class="key">Environment</span>
-          <span class="value mono">{{ config.env }}</span>
-        </div>
-        <div class="kv-row">
-          <span class="key">API base</span>
-          <span class="value mono">{{ short(config.apiBaseUrl, 32) }}</span>
-        </div>
-        <div class="kv-row">
-          <span class="key">Platform</span>
-          <span class="value mono">{{ platform }}</span>
-        </div>
-        <div class="kv-row">
-          <span class="key">Device ID</span>
-          <span class="value mono">{{ short(deviceId() ?? '—') }}</span>
-        </div>
-        <div class="kv-row">
-          <span class="key">Pending syncs</span>
-          <span
-            class="value"
-            [class.ok]="queue.pendingCount() === 0 && queue.deadLetterCount() === 0"
-            [class.warn]="queue.pendingCount() > 0 && queue.deadLetterCount() === 0"
-            [class.bad]="queue.deadLetterCount() > 0"
-          >
-            {{ queue.pendingCount() }} pending,
-            {{ queue.deadLetterCount() }} failed
-          </span>
-        </div>
-        <div class="kv-row">
-          <span class="key">Error reporting</span>
-          <span class="value" [class.ok]="errors.enabled()" [class.warn]="!errors.enabled()">
-            {{ errors.enabled() ? 'Active' : 'No DSN configured' }}
-          </span>
-        </div>
-        <div class="actions-row">
-          <ion-button size="small" fill="outline" (click)="goToQueue()">
-            <curtis-icon slot="start" name="list-outline" />
-            Sync queue
-          </ion-button>
-          <ion-button size="small" fill="clear" color="medium" (click)="copyDiagnostics()">
-            <curtis-icon slot="start" name="copy-outline" />
-            Copy diagnostics
-          </ion-button>
-        </div>
-      </div>
 
-      <div class="footer">
-        <div class="brand">CURTIS</div>
-        <div>Currency Tracking and Information System</div>
-        <div style="margin-top: 0.4rem;">v{{ version }} · build {{ buildNumber }}</div>
+        <!-- Location tracking -->
+        <div class="section-label">Location tracking</div>
+        <div class="card">
+          <div class="slider-row">
+            <div class="slider-row__head">
+              <span class="label">GPS ping interval</span>
+              <span class="val">{{ intervalSec() }} s</span>
+            </div>
+            <ion-range
+              [min]="config.gpsIntervalMin"
+              [max]="config.gpsIntervalMax"
+              [step]="5000"
+              snaps="true"
+              [(ngModel)]="intervalMs"
+              (ionChange)="onIntervalChange()"
+            />
+            <div class="slider-row__meta">
+              <span>15s · high resolution</span>
+              <span>5m · save battery</span>
+            </div>
+          </div>
+          <div class="actions">
+            <ion-button fill="clear" (click)="resetInterval()">
+              <curtis-icon slot="start" name="refresh-outline" size="sm" />
+              Reset to default
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="section-label">Notifications</div>
+        <div class="card">
+          <div class="row">
+            <span class="row__key">Permission</span>
+            <span
+              class="row__value"
+              [class.ok]="push.permission() === 'granted'"
+              [class.bad]="push.permission() === 'denied'"
+              [class.warn]="push.permission() === 'unknown'"
+            >
+              {{ push.permission() }}
+            </span>
+          </div>
+          <div class="row">
+            <span class="row__key">Registered</span>
+            <span class="row__value" [class.ok]="push.registered()" [class.bad]="!push.registered()">
+              {{ push.registered() ? 'Yes' : 'No' }}
+            </span>
+          </div>
+          @if (push.token(); as t) {
+            <div class="row">
+              <span class="row__key">Token</span>
+              <span class="row__value mono">{{ short(t) }}</span>
+            </div>
+          }
+          <div class="actions">
+            <ion-button fill="outline" (click)="reregister()">
+              <curtis-icon slot="start" name="cloud-upload-outline" size="sm" />
+              Re-register
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Background activity (Android) -->
+        @if (isAndroid()) {
+          <div class="section-label">Background activity</div>
+          <div class="card">
+            <div class="row">
+              <span class="row__key">Battery optimisation</span>
+              <span class="row__value">Managed by Android</span>
+            </div>
+            <div class="actions">
+              <ion-button fill="outline" (click)="openBatterySettings()">
+                <curtis-icon slot="start" name="battery-charging-outline" size="sm" />
+                Open battery settings
+              </ion-button>
+              <ion-button fill="clear" color="medium" (click)="reopenOnboarding()">
+                <curtis-icon slot="start" name="information-circle-outline" size="sm" />
+                Show onboarding
+              </ion-button>
+            </div>
+          </div>
+        }
+
+        <!-- Diagnostics -->
+        <div class="section-label">Diagnostics</div>
+        <div class="card">
+          <div class="row">
+            <span class="row__key">Version</span>
+            <span class="row__value mono">{{ version }}</span>
+          </div>
+          <div class="row">
+            <span class="row__key">Build</span>
+            <span class="row__value mono">{{ buildNumber }}</span>
+          </div>
+          <div class="row">
+            <span class="row__key">Environment</span>
+            <span class="row__value mono">{{ config.env }}</span>
+          </div>
+          <div class="row">
+            <span class="row__key">API base</span>
+            <span class="row__value mono">{{ short(config.apiBaseUrl, 32) }}</span>
+          </div>
+          <div class="row">
+            <span class="row__key">Platform</span>
+            <span class="row__value mono">{{ platform }}</span>
+          </div>
+          <div class="row">
+            <span class="row__key">Device ID</span>
+            <span class="row__value mono">{{ short(deviceId() ?? '—') }}</span>
+          </div>
+          <div class="row">
+            <span class="row__key">Pending syncs</span>
+            <span
+              class="row__value"
+              [class.ok]="queue.pendingCount() === 0 && queue.deadLetterCount() === 0"
+              [class.warn]="queue.pendingCount() > 0 && queue.deadLetterCount() === 0"
+              [class.bad]="queue.deadLetterCount() > 0"
+            >
+              {{ queue.pendingCount() }} pending · {{ queue.deadLetterCount() }} failed
+            </span>
+          </div>
+          <div class="row">
+            <span class="row__key">Error reporting</span>
+            <span class="row__value" [class.ok]="errors.enabled()" [class.warn]="!errors.enabled()">
+              {{ errors.enabled() ? 'Active' : 'No DSN configured' }}
+            </span>
+          </div>
+          <div class="actions">
+            <ion-button fill="outline" (click)="goToQueue()">
+              <curtis-icon slot="start" name="list-outline" size="sm" />
+              Sync queue
+            </ion-button>
+            <ion-button fill="clear" color="medium" (click)="copyDiagnostics()">
+              <curtis-icon slot="start" name="copy-outline" size="sm" />
+              Copy diagnostics
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <div class="footer__brand">CURTIS</div>
+          <div class="footer__sub">Currency Tracking and Information System</div>
+          <div class="footer__version">v{{ version }} · build {{ buildNumber }}</div>
+        </div>
       </div>
     </ion-content>
   `,
@@ -371,9 +420,7 @@ export class SettingsPage implements OnInit {
   protected readonly version = '0.1.0';
   protected readonly buildNumber = '10';
 
-  /** Local mirror of the GPS interval signal — ion-range needs ngModel binding. */
   protected intervalMs = this.config.gpsPingIntervalMs;
-
   protected readonly intervalSec = computed(() => Math.round(this.intervalMs / 1000));
 
   async ngOnInit(): Promise<void> {
@@ -383,7 +430,6 @@ export class SettingsPage implements OnInit {
     } catch {
       this.deviceId.set(null);
     }
-    // Refresh queue count when the page opens.
     await this.queue.refreshCount();
   }
 
@@ -459,9 +505,7 @@ export class SettingsPage implements OnInit {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(lines);
       }
-    } catch {
-      // ignore — toast still informs
-    }
+    } catch { /* ignore */ }
     const t = await this.toast.create({
       message: 'Diagnostics copied to clipboard.',
       duration: 2000, position: 'top', color: 'success',
@@ -492,7 +536,6 @@ export class SettingsPage implements OnInit {
     await alert.present();
   }
 
-  /** Truncate long identifiers / URLs for display. */
   protected short(value: string, max = 18): string {
     if (!value) return '—';
     if (value.length <= max) return value;

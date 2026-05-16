@@ -46,39 +46,136 @@ import type { Bank, Seal } from '../../core/models';
     ScanButtonComponent, CurtisIconComponent],
   styles: [
     `
-      .summary {
+      :host { display: block; }
+      ion-content { --background: var(--curtis-bg); }
+      ion-list { background: transparent; margin: 0 var(--curtis-space-3); }
+      ion-list[inset] ion-item {
+        --background: var(--curtis-surface-1);
+        --border-color: var(--curtis-border);
+        --min-height: 56px;
+      }
+      .section-label {
+        margin: var(--curtis-space-4) var(--curtis-space-5) var(--curtis-space-1);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        color: var(--curtis-text-subtle);
+      }
+
+      /* Progress card — replaces the old summary + progress bar pair */
+      .progress-card {
+        margin: var(--curtis-space-3) var(--curtis-space-4);
+        padding: var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+      }
+      .progress-card__head {
         display: flex;
         justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: var(--curtis-space-3);
+      }
+      .progress-card__label {
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-semibold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        color: var(--curtis-text-subtle);
+      }
+      .progress-card__counter {
+        font-size: var(--curtis-text-2xl);
+        font-weight: var(--curtis-weight-extrabold);
+        font-variant-numeric: tabular-nums;
+        color: var(--curtis-text);
+        line-height: 1;
+      }
+      .progress-card__counter .total {
+        font-size: var(--curtis-text-base);
+        font-weight: var(--curtis-weight-semibold);
+        color: var(--curtis-text-muted);
+        margin-left: var(--curtis-space-1);
+      }
+      .progress-card__bar {
+        height: 8px;
+        background: var(--curtis-surface-2);
+        border-radius: var(--curtis-radius-pill);
+        overflow: hidden;
+      }
+      .progress-card__fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--green-500), var(--green-600));
+        border-radius: var(--curtis-radius-pill);
+        transition: width 300ms var(--curtis-ease-out);
+      }
+      .progress-card__meta {
+        display: flex;
+        justify-content: space-between;
+        margin-top: var(--curtis-space-2);
+        font-size: var(--curtis-text-xs);
+        color: var(--curtis-text-subtle);
+        font-variant-numeric: tabular-nums;
+      }
+      .progress-card__pill {
+        display: inline-flex;
         align-items: center;
-        padding: 0.75rem 1rem;
-        background: var(--ion-color-light);
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: var(--curtis-radius-pill);
+        background: color-mix(in srgb, var(--ion-color-primary) 12%, transparent);
+        color: var(--ion-color-primary);
+        font-weight: var(--curtis-weight-semibold);
       }
-      .summary strong { font-size: 1.1rem; }
-      .progress { height: 6px; background: var(--ion-color-light); }
-      .progress-bar { height: 100%; background: var(--ion-color-success); transition: width 200ms ease-out; }
+
+      /* Warning block for unknown scans */
       .unknown {
-        margin: 0.75rem 1rem; padding: 0.5rem 0.75rem;
-        background: var(--ion-color-warning);
-        color: var(--ion-color-warning-contrast);
-        border-radius: 8px; font-size: 0.8rem;
+        margin: 0 var(--curtis-space-4) var(--curtis-space-3);
+        padding: var(--curtis-space-3) var(--curtis-space-4);
+        background: color-mix(in srgb, var(--ion-color-warning) 14%, transparent);
+        color: var(--amber-500);
+        border: 1px solid color-mix(in srgb, var(--ion-color-warning) 30%, transparent);
+        border-radius: var(--curtis-radius-md);
+        font-size: var(--curtis-text-sm);
+        display: flex;
+        gap: var(--curtis-space-2);
+        align-items: center;
       }
-      .actions { padding: 1rem; display: grid; gap: 0.5rem; }
-      .empty { text-align: center; padding: 2.5rem 1rem; color: var(--ion-color-medium); }
+
+      .actions {
+        padding: var(--curtis-space-4) var(--curtis-space-4)
+                 calc(var(--curtis-space-8) + env(safe-area-inset-bottom, 0));
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-2);
+      }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header [translucent]="true">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard" />
+          <ion-back-button defaultHref="/dashboard"></ion-back-button>
         </ion-buttons>
         <ion-title>Bank seals</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content [fullscreen]="true">
       <curtis-offline-banner />
 
+      <div class="curtis-form-strip">
+        <div class="curtis-form-strip__icon">
+          <curtis-icon name="barcode-outline" size="md" />
+        </div>
+        <div class="curtis-form-strip__text">
+          <div class="curtis-form-strip__title">Scan incoming bank seals</div>
+          <div class="curtis-form-strip__sub">Pick a bank, scan each seal, then submit.</div>
+        </div>
+      </div>
+
+      <div class="section-label">Bank</div>
       <ion-list inset>
         <ion-item>
           <ion-select
@@ -97,41 +194,60 @@ import type { Bank, Seal } from '../../core/models';
       </ion-list>
 
       @if (!selectedBankId) {
-        <div class="empty">
-          <curtis-icon name="business-outline" style="font-size: 3rem;" />
-          <p>Select a bank to load its incoming seals.</p>
+        <div class="curtis-empty">
+          <div class="curtis-empty__well">
+            <curtis-icon name="business-outline" size="xl" [strokeWidth]="1.5" />
+          </div>
+          <div class="curtis-empty__title">Choose a bank</div>
+          <div class="curtis-empty__body">
+            Select a bank from the dropdown above to load its incoming seals.
+          </div>
         </div>
       } @else if (loadingSeals()) {
-        <div class="empty">
-          <ion-spinner name="crescent" />
-          <p>Loading expected seals…</p>
+        <div class="curtis-empty">
+          <div class="curtis-empty__well">
+            <ion-spinner name="crescent" />
+          </div>
+          <div class="curtis-empty__title">Loading…</div>
+          <div class="curtis-empty__body">Fetching the expected seals for this bank.</div>
         </div>
       } @else if (expected().length === 0) {
-        <div class="empty">
-          <curtis-icon name="checkmark-done-circle-outline" style="font-size: 3rem;" />
-          <p>No incoming seals for this bank.</p>
+        <div class="curtis-empty">
+          <div class="curtis-empty__well curtis-empty__well--success">
+            <curtis-icon name="checkmark-done-circle-outline" size="xl" [strokeWidth]="1.5" />
+          </div>
+          <div class="curtis-empty__title">All clear</div>
+          <div class="curtis-empty__body">No incoming seals are pending for this bank.</div>
         </div>
       } @else {
-        <div class="summary">
-          <div>
-            <strong>{{ scannedCount() }}</strong> / {{ expected().length }} scanned
+        <div class="section-label">Scan progress</div>
+        <div class="progress-card">
+          <div class="progress-card__head">
+            <span class="progress-card__label">Scanned</span>
+            <span class="progress-card__counter">
+              {{ scannedCount() }}<span class="total"> / {{ expected().length }}</span>
+            </span>
           </div>
-          <ion-chip color="primary">
-            <curtis-icon name="business-outline" />
-            <ion-label>Bank</ion-label>
-          </ion-chip>
-        </div>
-        <div class="progress">
-          <div class="progress-bar" [style.width.%]="progressPct()"></div>
+          <div class="progress-card__bar">
+            <div class="progress-card__fill" [style.width.%]="progressPct()"></div>
+          </div>
+          <div class="progress-card__meta">
+            <span class="progress-card__pill">
+              <curtis-icon name="business-outline" size="xs" />
+              Bank delivery
+            </span>
+            <span>{{ progressPct() }}%</span>
+          </div>
         </div>
 
         @if (unknownScans().length > 0) {
           <div class="unknown">
-            <curtis-icon name="alert-circle-outline" />
+            <curtis-icon name="alert-circle-outline" size="sm" />
             {{ unknownScans().length }} scan(s) didn't match the expected list — still recorded.
           </div>
         }
 
+        <div class="section-label">Seals</div>
         <curtis-seal-list [seals]="display()" />
 
         <div class="actions">
@@ -139,7 +255,7 @@ import type { Bank, Seal } from '../../core/models';
             <curtis-scan-button label="Scan seals" (scan)="startScan()" />
           } @else {
             <ion-button color="medium" expand="block" (click)="stopScan()">
-              <curtis-icon slot="start" name="close-outline" />
+              <curtis-icon slot="start" name="close-outline" size="sm" />
               Stop scanning
             </ion-button>
           }
@@ -153,6 +269,7 @@ import type { Bank, Seal } from '../../core/models';
               <ion-spinner slot="start" name="crescent" />
               Submitting…
             } @else {
+              <curtis-icon slot="start" name="cloud-upload-outline" size="sm" />
               Submit {{ scannedCount() }} seal(s)
             }
           </ion-button>

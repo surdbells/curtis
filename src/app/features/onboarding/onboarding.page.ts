@@ -14,6 +14,7 @@ import { Capacitor } from '@capacitor/core';
 import { OnboardingService } from '../../core/services/onboarding.service';
 import { PushService } from '../../core/services/push.service';
 import { SessionStore } from '../../core/stores/session.store';
+import { CurtisIconComponent } from '../../shared/components/icon';
 
 interface OnboardingStep {
   id: string;
@@ -24,27 +25,16 @@ interface OnboardingStep {
 }
 
 /**
- * Post-login onboarding — Phase 8 Commit 3.
+ * Onboarding — Phase 9 premium redesign.
  *
- * Shown once per agent (versioned by OnboardingService.ONBOARDING_VERSION).
- * Two steps:
- *   1. Welcome + summary of what CurTIS will be doing in the background
- *      (location tracking, queued sync, push notifications). The agent
- *      is acknowledging awareness — there's no permission grant on
- *      this screen, it's purely informational.
- *   2. Battery optimisation exemption. Explains why Android's default
- *      power saving would kill the foreground GPS service, and provides
- *      a "Open battery settings" CTA that fires the AppLauncher intent.
- *      Skip is allowed — the toggle is on the system side and the
- *      agent might already have it set.
+ * Two-step flow (welcome + battery on Android).
+ *   - Step indicator: pill dots, the current one filled
+ *   - Hero icon: 88px square in a soft tinted well
+ *   - Body text wrapped in a polished info card stack
+ *   - Sticky action area at the bottom
  *
- * iOS hides step 2 (no equivalent toggle) and only shows step 1.
- *
- * On completion, OnboardingService.markComplete is called and the
- * agent is routed to /dashboard.
+ * Behavior is preserved from Phase 8.
  */
-import { CurtisIconComponent } from '../../shared/components/icon';
-
 @Component({
   selector: 'curtis-onboarding',
   standalone: true,
@@ -57,141 +47,201 @@ import { CurtisIconComponent } from '../../shared/components/icon';
 
       .stage {
         min-height: 100%;
-        display: flex; flex-direction: column;
-        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        padding: var(--curtis-space-4);
+        padding-top: calc(env(safe-area-inset-top, 0) + var(--curtis-space-4));
+        padding-bottom: calc(env(safe-area-inset-bottom, 0) + var(--curtis-space-4));
       }
 
-      .step-progress {
-        display: flex; gap: 0.4rem;
-        margin: 0.5rem 0 1.5rem;
+      /* Step dots */
+      .progress {
+        display: flex;
+        gap: var(--curtis-space-1_5);
+        margin-bottom: var(--curtis-space-6);
       }
-      .dot {
-        flex: 1; height: 4px;
+      .progress__dot {
+        flex: 1;
+        height: 4px;
+        border-radius: var(--curtis-radius-pill);
         background: var(--curtis-border);
-        border-radius: 2px;
-        transition: background 200ms ease-out;
+        transition: background var(--curtis-duration-normal) var(--curtis-ease-out);
       }
-      .dot.active { background: var(--ion-color-primary); }
+      .progress__dot.active { background: var(--ion-color-primary); }
 
+      /* Hero */
       .hero {
         text-align: center;
-        margin-top: 1rem;
+        margin: var(--curtis-space-4) 0 var(--curtis-space-6);
+        animation: rise var(--curtis-duration-slow) var(--curtis-ease-out) both;
       }
-      .hero .icon-wrap {
-        width: 92px; height: 92px;
-        margin: 0 auto 1rem;
-        border-radius: 24px;
-        display: grid; place-items: center;
+      .hero__well {
+        width: 96px;
+        height: 96px;
+        margin: 0 auto var(--curtis-space-4);
+        border-radius: var(--curtis-radius-2xl);
+        display: grid;
+        place-items: center;
         background: var(--curtis-gradient-primary);
+        color: var(--ion-color-tertiary);
         box-shadow: var(--curtis-shadow-md);
       }
-      .hero .icon-wrap ion-icon {
-        font-size: 2.6rem;
-        color: var(--ion-color-tertiary);
-      }
-      .hero h1 {
-        font-size: 1.5rem; font-weight: 800;
-        letter-spacing: -0.01em;
-        margin: 0;
+      .hero__title {
+        font-size: var(--curtis-text-2xl);
+        font-weight: var(--curtis-weight-extrabold);
         color: var(--curtis-text);
+        letter-spacing: var(--curtis-tracking-tight);
+        margin: 0 0 var(--curtis-space-2);
       }
-      .hero p {
-        margin: 0.75rem auto 0;
-        max-width: 30rem;
+      .hero__body {
         color: var(--curtis-text-muted);
-        font-size: 0.92rem;
-        line-height: 1.5;
+        font-size: var(--curtis-text-base);
+        line-height: var(--curtis-leading-snug);
+        max-width: 28rem;
+        margin: 0 auto;
       }
 
-      .points {
-        margin: 1.75rem 0 1rem;
-        padding: 1rem;
+      /* Info card stack */
+      .info-stack {
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-3);
+        animation: rise var(--curtis-duration-slow) var(--curtis-ease-out) 100ms both;
+      }
+      .info-card {
+        display: flex;
+        gap: var(--curtis-space-3);
+        padding: var(--curtis-space-4);
         background: var(--curtis-surface-1);
         border: 1px solid var(--curtis-border);
         border-radius: var(--curtis-radius-lg);
-        box-shadow: var(--curtis-shadow-sm);
+        box-shadow: var(--curtis-shadow-xs);
       }
-      .point {
-        display: flex; gap: 0.75rem;
-        padding: 0.6rem 0;
-        border-bottom: 1px solid var(--curtis-border);
-      }
-      .point:last-child { border-bottom: none; }
-      .point ion-icon {
+      .info-card__icon {
         flex-shrink: 0;
-        font-size: 1.4rem;
-        color: var(--ion-color-tertiary);
-        margin-top: 0.1rem;
+        width: 36px;
+        height: 36px;
+        border-radius: var(--curtis-radius-md);
+        display: grid;
+        place-items: center;
+        background: color-mix(in srgb, var(--ion-color-tertiary) 16%, transparent);
+        color: var(--gold-700);
       }
-      .point .text { font-size: 0.88rem; line-height: 1.45; }
-      .point .text strong { display: block; margin-bottom: 0.15rem; font-weight: 700; }
-      .point .text span { color: var(--curtis-text-muted); }
+      .info-card--warn .info-card__icon {
+        background: color-mix(in srgb, var(--ion-color-warning) 18%, transparent);
+        color: var(--amber-500);
+      }
+      .info-card__text {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-0_5);
+        min-width: 0;
+      }
+      .info-card__title {
+        font-size: var(--curtis-text-sm);
+        font-weight: var(--curtis-weight-bold);
+        color: var(--curtis-text);
+      }
+      .info-card__body {
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text-muted);
+        line-height: var(--curtis-leading-snug);
+      }
 
+      /* Actions */
       .actions {
         margin-top: auto;
-        padding: 1.25rem 0 0.5rem;
-        display: grid; gap: 0.5rem;
+        padding-top: var(--curtis-space-6);
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-2);
+      }
+
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
       }
     `,
   ],
   template: `
     <ion-content [fullscreen]="true">
       <div class="stage">
-        <div class="step-progress">
+        <div class="progress">
           @for (s of steps(); let i = $index; track s.id) {
-            <span class="dot" [class.active]="i <= stepIndex()"></span>
+            <span class="progress__dot" [class.active]="i <= stepIndex()"></span>
           }
         </div>
 
         @if (currentStep(); as step) {
           <div class="hero">
-            <div class="icon-wrap">
-              <curtis-icon [name]="step.icon" />
+            <div class="hero__well">
+              <curtis-icon [name]="step.icon" size="xl" [strokeWidth]="1.8" />
             </div>
-            <h1>{{ step.title }}</h1>
-            <p>{{ step.body }}</p>
+            <h1 class="hero__title">{{ step.title }}</h1>
+            <p class="hero__body">{{ step.body }}</p>
           </div>
 
           @if (step.id === 'welcome') {
-            <div class="points">
-              <div class="point">
-                <curtis-icon name="navigate-circle-outline" />
-                <div class="text">
-                  <strong>Live route tracking</strong>
-                  <span>Your truck location is shared with dispatch every 30 seconds while you're on shift. A persistent notification confirms it's running.</span>
+            <div class="info-stack">
+              <div class="info-card">
+                <div class="info-card__icon">
+                  <curtis-icon name="navigate-circle-outline" size="sm" />
+                </div>
+                <div class="info-card__text">
+                  <span class="info-card__title">Live route tracking</span>
+                  <span class="info-card__body">
+                    Your truck location is shared with dispatch every 30 seconds while you're on shift. A persistent notification confirms it's running.
+                  </span>
                 </div>
               </div>
-              <div class="point">
-                <curtis-icon name="cloud-upload-outline" />
-                <div class="text">
-                  <strong>Offline-safe</strong>
-                  <span>Drop signal? Reports and scans queue up and sync automatically when connection returns. You'll see a status badge if anything's pending.</span>
+              <div class="info-card">
+                <div class="info-card__icon">
+                  <curtis-icon name="cloud-upload-outline" size="sm" />
+                </div>
+                <div class="info-card__text">
+                  <span class="info-card__title">Offline-safe</span>
+                  <span class="info-card__body">
+                    Drop signal? Reports and scans queue up and sync automatically when connection returns.
+                  </span>
                 </div>
               </div>
-              <div class="point">
-                <curtis-icon name="notifications-outline" />
-                <div class="text">
-                  <strong>Dispatch alerts</strong>
-                  <span>Route changes, urgent messages, and SOS confirmations arrive as push notifications — no need to keep the app open.</span>
+              <div class="info-card">
+                <div class="info-card__icon">
+                  <curtis-icon name="notifications-outline" size="sm" />
+                </div>
+                <div class="info-card__text">
+                  <span class="info-card__title">Dispatch alerts</span>
+                  <span class="info-card__body">
+                    Route changes, urgent messages, and SOS confirmations arrive as push notifications.
+                  </span>
                 </div>
               </div>
             </div>
           }
 
           @if (step.id === 'battery' && isAndroid()) {
-            <div class="points">
-              <div class="point">
-                <curtis-icon name="warning-outline" />
-                <div class="text">
-                  <strong>Why this matters</strong>
-                  <span>By default, Android may stop CurTIS from running in the background to save battery. For cash-in-transit safety, the tracking service needs to stay active throughout your shift.</span>
+            <div class="info-stack">
+              <div class="info-card info-card--warn">
+                <div class="info-card__icon">
+                  <curtis-icon name="warning-outline" size="sm" />
+                </div>
+                <div class="info-card__text">
+                  <span class="info-card__title">Why this matters</span>
+                  <span class="info-card__body">
+                    By default, Android may stop CurTIS from running in the background to save battery. For CIT safety, the tracking service needs to stay active throughout your shift.
+                  </span>
                 </div>
               </div>
-              <div class="point">
-                <curtis-icon name="checkmark-circle-outline" />
-                <div class="text">
-                  <strong>What to do</strong>
-                  <span>Tap "Open settings" below. On the next screen, find CurTIS and select "Don't optimise" (or "Allow background activity" — wording varies by device).</span>
+              <div class="info-card">
+                <div class="info-card__icon">
+                  <curtis-icon name="checkmark-circle-outline" size="sm" />
+                </div>
+                <div class="info-card__text">
+                  <span class="info-card__title">What to do</span>
+                  <span class="info-card__body">
+                    Tap "Open settings" below. On the next screen, find CurTIS and select "Don't optimise" (or "Allow background activity" — wording varies by device).
+                  </span>
                 </div>
               </div>
             </div>
@@ -200,7 +250,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
           <div class="actions">
             @if (step.cta) {
               <ion-button expand="block" (click)="runCta(step.cta)">
-                <curtis-icon slot="start" name="settings-outline" />
+                <curtis-icon slot="start" name="settings-outline" size="sm" />
                 {{ step.cta.label }}
               </ion-button>
             }
@@ -212,7 +262,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
             >
               {{ isLastStep() ? "I'm ready — start using CurTIS" : 'Continue' }}
               @if (!isLastStep()) {
-                <curtis-icon slot="end" name="arrow-forward-outline" />
+                <curtis-icon slot="end" name="arrow-forward-outline" size="sm" />
               }
             </ion-button>
           </div>
@@ -230,19 +280,11 @@ export class OnboardingPage implements OnInit {
 
   protected readonly stepIndex = signal(0);
   protected readonly isAndroid = signal(Capacitor.getPlatform() === 'android');
-
-  /**
-   * Step list — iOS only sees step 1 (welcome). Android sees both.
-   * We compute this once at construction so it's stable across renders.
-   */
   protected readonly steps = signal<OnboardingStep[]>(this.buildSteps());
-
   protected readonly currentStep = computed(() => this.steps()[this.stepIndex()] ?? null);
   protected readonly isLastStep = computed(() => this.stepIndex() === this.steps().length - 1);
 
   async ngOnInit(): Promise<void> {
-    // Safety net: if someone hits /onboarding while not authenticated,
-    // bounce them to login.
     if (!this.session.isAuthenticated()) {
       void this.router.navigateByUrl('/login', { replaceUrl: true });
     }
@@ -257,18 +299,11 @@ export class OnboardingPage implements OnInit {
   }
 
   protected async runCta(cta: NonNullable<OnboardingStep['cta']>): Promise<void> {
-    try {
-      await cta.action();
-    } catch {
-      // CTA failures are non-fatal — the agent can still continue.
-    }
+    try { await cta.action(); } catch { /* ignore */ }
   }
 
   private async complete(): Promise<void> {
     await this.onboarding.markComplete();
-    // Fire push registration here too — covers the case where the agent
-    // logged in via the LoginPage but rejected the OS prompt then; this
-    // gives them a second chance.
     void this.push.register().catch(() => undefined);
     await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
   }
@@ -279,8 +314,7 @@ export class OnboardingPage implements OnInit {
         id: 'welcome',
         icon: 'shield-checkmark-outline',
         title: 'Welcome to CurTIS',
-        body:
-          "You're set up. Here's what CurTIS does in the background once your day starts.",
+        body: "You're set up. Here's what CurTIS does in the background once your day starts.",
       },
     ];
     if (Capacitor.getPlatform() === 'android') {
@@ -288,19 +322,15 @@ export class OnboardingPage implements OnInit {
         id: 'battery',
         icon: 'battery-charging-outline',
         title: 'One quick setup step',
-        body:
-          'Allow CurTIS to run without battery restrictions so location tracking stays active throughout your shift.',
+        body: 'Allow CurTIS to run without battery restrictions so location tracking stays active throughout your shift.',
         cta: {
           label: 'Open battery settings',
           action: async () => {
             const opened = await this.onboarding.openBatterySettings();
             if (!opened) {
               const t = await this.toast.create({
-                message:
-                  "Couldn't open settings directly. Open your phone's Settings app and search for 'battery optimisation' or 'background activity'.",
-                duration: 4500,
-                position: 'top',
-                color: 'warning',
+                message: "Couldn't open settings directly. Open your phone's Settings app and search for 'battery optimisation' or 'background activity'.",
+                duration: 4500, position: 'top', color: 'warning',
                 buttons: [{ icon: 'close', role: 'cancel' }],
               });
               await t.present();

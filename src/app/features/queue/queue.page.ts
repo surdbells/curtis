@@ -11,288 +11,347 @@ import { AlertController, IonicModule, ToastController } from '@ionic/angular';
 
 import { OfflineQueueService } from '../../core/services/offline-queue.service';
 import { ConnectivityService } from '../../core/services/connectivity.service';
+import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 import type { QueuedRequest } from '../../core/models';
 
 /**
- * Sync queue inspection — Phase 7 Commit 2.
+ * Sync queue — Phase 9 premium redesign.
  *
- * Lists every row in queued_requests, split into two sections:
- *   1. Pending — visible to the drain worker, currently sized 1.. or
- *      waiting for next_attempt_at to elapse.
- *   2. Dead-letter — exceeded 10 retries. Hidden from the worker; the
- *      agent must retry or discard manually.
+ * Layout:
+ *   - Header strip with 2 stat blocks (pending, failed)
+ *   - 'Drain now' CTA when there are pending rows + online
+ *   - Pending section: rows with retry+discard buttons
+ *   - Failed section: dead-letter rows with same actions
+ *   - 'Clear all' destructive footer button
  *
- * Affordances per row:
- *   - Retry — flip dead-letter back to pending OR force-trigger a drain
- *             for a pending row (in case the timer hasn't fired yet).
- *   - Discard — permanently delete the row.
+ * Empty state when both lists are 0: large success icon-well +
+ * encouraging copy.
  *
- * Affordances above the list:
- *   - Refresh — re-query the table (pull-to-refresh or button).
- *   - Drain now — manually trigger the worker (useful for testing).
- *   - Clear all — delete every row (confirmed via dialog).
+ * Behavior preserved from Phase 7.
  */
-import { CurtisIconComponent } from '../../shared/components/icon';
-
 @Component({
   selector: 'curtis-queue',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, CurtisIconComponent],
+  imports: [CommonModule, IonicModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
       :host { display: block; }
       ion-content { --background: var(--curtis-bg); }
 
-      .summary {
-        margin: 0.75rem;
-        padding: 0.75rem 1rem;
+      .stats {
+        margin: var(--curtis-space-3) var(--curtis-space-4);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--curtis-space-3);
+      }
+      .stat {
         background: var(--curtis-surface-1);
         border: 1px solid var(--curtis-border);
-        border-radius: var(--curtis-radius-md);
-        box-shadow: var(--curtis-shadow-sm);
-        display: flex; align-items: center; justify-content: space-between;
-        gap: 0.5rem;
+        border-radius: var(--curtis-radius-lg);
+        padding: var(--curtis-space-4);
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-1);
+        box-shadow: var(--curtis-shadow-xs);
       }
-      .summary-counts { display: flex; gap: 0.5rem; }
-      .count-pill {
-        display: inline-flex; align-items: center; gap: 0.3rem;
-        padding: 0.3rem 0.7rem;
-        border-radius: 999px;
-        font-size: 0.78rem; font-weight: 600;
-        background: var(--curtis-surface-2);
-        color: var(--curtis-text-muted);
-      }
-      .count-pill.pending { background: color-mix(in srgb, var(--ion-color-warning) 18%, transparent); color: var(--ion-color-warning-shade); }
-      .count-pill.dead    { background: color-mix(in srgb, var(--ion-color-danger) 18%, transparent);  color: var(--ion-color-danger); }
-      .summary ion-button { --border-radius: 999px; }
-
-      .empty {
-        text-align: center;
-        padding: 3rem 1rem;
+      .stat__head {
+        display: flex;
+        align-items: center;
+        gap: var(--curtis-space-1_5);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-semibold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
         color: var(--curtis-text-subtle);
       }
-      .empty ion-icon { font-size: 3rem; opacity: 0.45; }
-
-      .row {
-        display: flex; align-items: flex-start; gap: 0.65rem;
-        padding: 0.75rem 1rem;
-        background: var(--curtis-surface-1);
-        border: 1px solid var(--curtis-border);
-        border-radius: var(--curtis-radius-md);
-        margin: 0 0.75rem 0.5rem;
-        box-shadow: var(--curtis-shadow-sm);
-      }
-      .row.dead {
-        border-color: color-mix(in srgb, var(--ion-color-danger) 45%, var(--curtis-border));
-      }
-      .row .body { flex: 1; min-width: 0; }
-      .row .head {
-        display: flex; align-items: center; gap: 0.4rem;
-        margin-bottom: 0.2rem;
-      }
-      .row .method {
-        font-size: 0.65rem; font-weight: 700;
-        padding: 0.1rem 0.4rem;
-        border-radius: 4px;
-        background: var(--ion-color-primary);
-        color: var(--ion-color-primary-contrast);
-        letter-spacing: 0.05em;
-      }
-      .row .path {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 0.82rem;
-        color: var(--curtis-text);
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      }
-      .row .meta {
-        font-size: 0.72rem;
-        color: var(--curtis-text-subtle);
+      .stat__value {
+        font-size: var(--curtis-text-2xl);
+        font-weight: var(--curtis-weight-extrabold);
         font-variant-numeric: tabular-nums;
-        margin-top: 0.2rem;
+        color: var(--curtis-text);
+        line-height: 1;
       }
-      .row .error {
-        font-size: 0.72rem;
-        color: var(--ion-color-danger);
-        margin-top: 0.2rem;
-        word-break: break-word;
-      }
-      .row .actions {
-        display: flex; flex-direction: column; gap: 0.25rem;
-        flex-shrink: 0;
-      }
-      .row .actions ion-button {
-        --padding-start: 0.6rem;
-        --padding-end: 0.6rem;
-        height: 32px; font-size: 0.78rem;
-        --border-radius: 6px;
+      .stat.warn .stat__value { color: var(--amber-500); }
+      .stat.bad  .stat__value { color: var(--red-500); }
+      .stat.warn .stat__head  { color: var(--amber-500); }
+      .stat.bad  .stat__head  { color: var(--red-500); }
+
+      .drain-cta {
+        margin: 0 var(--curtis-space-4) var(--curtis-space-3);
       }
 
       .section-label {
-        margin: 1.25rem 1rem 0.5rem;
-        font-size: 0.72rem; font-weight: 700;
-        letter-spacing: 0.08em; text-transform: uppercase;
+        margin: var(--curtis-space-4) var(--curtis-space-5) var(--curtis-space-2);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
         color: var(--curtis-text-subtle);
       }
-      .section-label.dead { color: var(--ion-color-danger); }
+      .section-label.warn { color: var(--amber-500); }
+      .section-label.bad  { color: var(--red-500); }
 
-      .drain-strip {
-        margin: 0 0.75rem 0.75rem;
-        padding: 0.55rem 0.85rem;
-        background: color-mix(in srgb, var(--ion-color-success) 15%, transparent);
-        border: 1px solid color-mix(in srgb, var(--ion-color-success) 35%, transparent);
+      .list {
+        padding: 0 var(--curtis-space-4);
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-2);
+      }
+      .row {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--curtis-space-3);
+        padding: var(--curtis-space-3) var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+      }
+      .row.dead { border-left: 3px solid var(--red-500); }
+
+      .row__icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--curtis-radius-md);
+        background: color-mix(in srgb, var(--ion-color-primary) 12%, transparent);
+        color: var(--ion-color-primary);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+      }
+      .row.dead .row__icon {
+        background: color-mix(in srgb, var(--ion-color-danger) 12%, transparent);
+        color: var(--red-500);
+      }
+
+      .row__body { flex: 1; min-width: 0; }
+      .row__method {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: var(--curtis-radius-xs);
+        font-size: 10px;
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        background: var(--curtis-surface-2);
+        color: var(--curtis-text-muted);
+        margin-right: var(--curtis-space-2);
+        font-family: var(--curtis-font-mono);
+      }
+      .row__path {
+        font-family: var(--curtis-font-mono);
+        font-size: var(--curtis-text-xs);
+        color: var(--curtis-text);
+        font-weight: var(--curtis-weight-semibold);
+        word-break: break-all;
+      }
+      .row__meta {
+        margin-top: var(--curtis-space-1);
+        font-size: var(--curtis-text-xs);
+        color: var(--curtis-text-subtle);
+        font-variant-numeric: tabular-nums;
+      }
+      .row__error {
+        margin-top: var(--curtis-space-2);
+        padding: var(--curtis-space-1_5) var(--curtis-space-2);
+        background: color-mix(in srgb, var(--ion-color-danger) 8%, transparent);
         border-radius: var(--curtis-radius-sm);
-        font-size: 0.78rem;
-        color: var(--ion-color-success-shade);
-        display: flex; align-items: center; gap: 0.4rem;
+        font-size: var(--curtis-text-xs);
+        color: var(--red-600);
+        display: flex;
+        gap: var(--curtis-space-1_5);
+        align-items: flex-start;
+      }
+
+      .row__actions {
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-1);
+        flex-shrink: 0;
+      }
+      .row__actions ion-button {
+        min-height: 36px;
+        --padding-start: var(--curtis-space-2);
+        --padding-end: var(--curtis-space-2);
+      }
+
+      .footer-actions {
+        padding: var(--curtis-space-6) var(--curtis-space-4) calc(var(--curtis-space-8) + env(safe-area-inset-bottom, 0));
+        display: flex;
+        justify-content: center;
+      }
+
+      /* Empty state */
+      .empty {
+        height: 70vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: var(--curtis-space-3);
+        padding: var(--curtis-space-6);
+      }
+      .empty__well {
+        width: 88px;
+        height: 88px;
+        border-radius: var(--curtis-radius-xl);
+        background: color-mix(in srgb, var(--ion-color-success) 12%, transparent);
+        color: var(--green-600);
+        display: grid;
+        place-items: center;
+      }
+      .empty__title {
+        font-size: var(--curtis-text-lg);
+        font-weight: var(--curtis-weight-bold);
+        color: var(--curtis-text);
+      }
+      .empty__body {
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text-muted);
+        max-width: 22rem;
       }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header [translucent]="true">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard" />
+          <ion-back-button defaultHref="/dashboard"></ion-back-button>
         </ion-buttons>
         <ion-title>Sync queue</ion-title>
-        <ion-buttons slot="end">
-          <ion-button (click)="refresh()" [disabled]="loading()">
-            <curtis-icon slot="icon-only" name="refresh-outline" />
-          </ion-button>
-        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content [fullscreen]="true">
       <ion-refresher slot="fixed" (ionRefresh)="onPullRefresh($event)">
         <ion-refresher-content />
       </ion-refresher>
 
-      <div class="summary">
-        <div class="summary-counts">
-          <span class="count-pill pending">
-            <curtis-icon name="cloud-upload-outline" />
-            {{ queue.pendingCount() }} pending
-          </span>
-          @if (queue.deadLetterCount() > 0) {
-            <span class="count-pill dead">
-              <curtis-icon name="alert-circle-outline" />
-              {{ queue.deadLetterCount() }} failed
-            </span>
-          }
-        </div>
-        <ion-button
-          size="small" fill="solid"
-          [disabled]="queue.draining() || !connectivity.online() || total() === 0"
-          (click)="drainNow()"
-        >
-          @if (queue.draining()) {
-            <ion-spinner slot="start" name="crescent" />
-            Draining…
-          } @else {
-            <curtis-icon slot="start" name="play-outline" />
-            Drain now
-          }
-        </ion-button>
-      </div>
+      <curtis-offline-banner />
 
-      @if (queue.draining()) {
-        <div class="drain-strip">
-          <ion-spinner name="dots" />
-          Replaying queued requests…
-        </div>
-      }
-
-      @if (!connectivity.online()) {
-        <div class="drain-strip" style="background: color-mix(in srgb, var(--ion-color-warning) 18%, transparent); color: var(--ion-color-warning-shade); border-color: color-mix(in srgb, var(--ion-color-warning) 40%, transparent);">
-          <curtis-icon name="cloud-offline-outline" />
-          Offline — queue will drain when connection returns.
-        </div>
-      }
-
-      @if (loading()) {
+      @if (total() === 0) {
         <div class="empty">
-          <ion-spinner name="crescent" />
-          <p>Loading queue…</p>
-        </div>
-      } @else if (total() === 0) {
-        <div class="empty">
-          <curtis-icon name="checkmark-done-circle-outline" />
-          <h3 style="margin-top: 0.75rem;">All synced</h3>
-          <p>No queued requests waiting for delivery.</p>
+          <div class="empty__well">
+            <curtis-icon name="checkmark-circle-outline" size="xl" [strokeWidth]="1.5" />
+          </div>
+          <div class="empty__title">All caught up</div>
+          <div class="empty__body">
+            Every request has been synced. Nothing is waiting in the queue.
+          </div>
         </div>
       } @else {
+        <!-- Stats -->
+        <div class="stats">
+          <div class="stat" [class.warn]="queue.pendingCount() > 0">
+            <div class="stat__head">
+              <curtis-icon name="cloud-upload-outline" size="xs" />
+              Pending
+            </div>
+            <div class="stat__value">{{ queue.pendingCount() }}</div>
+          </div>
+          <div class="stat" [class.bad]="queue.deadLetterCount() > 0">
+            <div class="stat__head">
+              <curtis-icon name="warning-outline" size="xs" />
+              Failed
+            </div>
+            <div class="stat__value">{{ queue.deadLetterCount() }}</div>
+          </div>
+        </div>
+
+        @if (pendingRows().length > 0 && connectivity.online()) {
+          <div class="drain-cta">
+            <ion-button expand="block" [disabled]="queue.draining()" (click)="drainNow()">
+              @if (queue.draining()) {
+                <ion-spinner slot="start" name="crescent" />
+                Draining…
+              } @else {
+                <curtis-icon slot="start" name="cloud-upload-outline" size="sm" />
+                Drain now
+              }
+            </ion-button>
+          </div>
+        }
+
+        <!-- Pending rows -->
         @if (pendingRows().length > 0) {
-          <div class="section-label">Pending</div>
-          @for (r of pendingRows(); track r.id) {
-            <div class="row">
-              <div class="body">
-                <div class="head">
-                  <span class="method">{{ r.method }}</span>
-                  <span class="path">{{ shortPath(r.url) }}</span>
+          <div class="section-label warn">Pending sync ({{ pendingRows().length }})</div>
+          <div class="list">
+            @for (r of pendingRows(); track r.id) {
+              <div class="row">
+                <div class="row__icon">
+                  <curtis-icon name="cloud-upload-outline" size="sm" />
                 </div>
-                <div class="meta">
-                  Queued {{ formatRel(r.createdAt) }}
-                  @if (r.retryCount > 0) {
-                    · {{ r.retryCount }} attempt(s)
-                  }
-                  @if (r.nextAttemptAt) {
-                    · next try {{ formatRel(r.nextAttemptAt) }}
-                  }
-                </div>
-                @if (r.lastError) {
-                  <div class="error">
-                    <curtis-icon name="warning-outline" /> {{ r.lastError }}
+                <div class="row__body">
+                  <div>
+                    <span class="row__method">{{ r.method }}</span>
+                    <span class="row__path">{{ shortPath(r.url) }}</span>
                   </div>
-                }
+                  <div class="row__meta">
+                    Queued {{ formatRel(r.createdAt) }} · {{ r.retryCount }} attempts
+                  </div>
+                  @if (r.lastError) {
+                    <div class="row__error">
+                      <curtis-icon name="warning-outline" size="xs" />
+                      {{ r.lastError }}
+                    </div>
+                  }
+                </div>
+                <div class="row__actions">
+                  <ion-button fill="solid" color="primary" size="small" (click)="retry(r)">
+                    <curtis-icon slot="icon-only" name="reload-outline" size="sm" />
+                  </ion-button>
+                  <ion-button fill="outline" color="danger" size="small" (click)="confirmDiscard(r)">
+                    <curtis-icon slot="icon-only" name="trash-outline" size="sm" />
+                  </ion-button>
+                </div>
               </div>
-              <div class="actions">
-                <ion-button fill="outline" (click)="retry(r)">
-                  <curtis-icon slot="icon-only" name="reload-outline" />
-                </ion-button>
-                <ion-button fill="outline" color="danger" (click)="confirmDiscard(r)">
-                  <curtis-icon slot="icon-only" name="trash-outline" />
-                </ion-button>
-              </div>
-            </div>
-          }
+            }
+          </div>
         }
 
+        <!-- Failed rows (dead-letter) -->
         @if (deadRows().length > 0) {
-          <div class="section-label dead">Failed (manual handling required)</div>
-          @for (r of deadRows(); track r.id) {
-            <div class="row dead">
-              <div class="body">
-                <div class="head">
-                  <span class="method">{{ r.method }}</span>
-                  <span class="path">{{ shortPath(r.url) }}</span>
+          <div class="section-label bad">Failed ({{ deadRows().length }})</div>
+          <div class="list">
+            @for (r of deadRows(); track r.id) {
+              <div class="row dead">
+                <div class="row__icon">
+                  <curtis-icon name="warning-outline" size="sm" />
                 </div>
-                <div class="meta">
-                  Queued {{ formatRel(r.createdAt) }}
-                  · {{ r.retryCount }} attempts
-                </div>
-                @if (r.lastError) {
-                  <div class="error">
-                    <curtis-icon name="warning-outline" /> {{ r.lastError }}
+                <div class="row__body">
+                  <div>
+                    <span class="row__method">{{ r.method }}</span>
+                    <span class="row__path">{{ shortPath(r.url) }}</span>
                   </div>
-                }
+                  <div class="row__meta">
+                    Queued {{ formatRel(r.createdAt) }} · {{ r.retryCount }} attempts
+                  </div>
+                  @if (r.lastError) {
+                    <div class="row__error">
+                      <curtis-icon name="warning-outline" size="xs" />
+                      {{ r.lastError }}
+                    </div>
+                  }
+                </div>
+                <div class="row__actions">
+                  <ion-button fill="solid" color="primary" size="small" (click)="retry(r)">
+                    <curtis-icon slot="icon-only" name="reload-outline" size="sm" />
+                  </ion-button>
+                  <ion-button fill="outline" color="danger" size="small" (click)="confirmDiscard(r)">
+                    <curtis-icon slot="icon-only" name="trash-outline" size="sm" />
+                  </ion-button>
+                </div>
               </div>
-              <div class="actions">
-                <ion-button fill="solid" color="primary" (click)="retry(r)">
-                  <curtis-icon slot="icon-only" name="reload-outline" />
-                </ion-button>
-                <ion-button fill="outline" color="danger" (click)="confirmDiscard(r)">
-                  <curtis-icon slot="icon-only" name="trash-outline" />
-                </ion-button>
-              </div>
-            </div>
-          }
+            }
+          </div>
         }
 
-        <div style="padding: 1rem; display: flex; justify-content: center;">
+        <div class="footer-actions">
           <ion-button fill="clear" color="danger" (click)="confirmClearAll()">
-            <curtis-icon slot="start" name="trash-bin-outline" />
-            Clear all
+            <curtis-icon slot="start" name="trash-bin-outline" size="sm" />
+            Clear entire queue
           </ion-button>
         </div>
       }
@@ -339,9 +398,7 @@ export class QueuePage implements OnInit {
     try {
       await this.queue.drain();
       await this.refresh();
-    } catch {
-      // Drain failures are non-fatal — individual row state already updated.
-    }
+    } catch { /* non-fatal */ }
   }
 
   async retry(r: QueuedRequest): Promise<void> {
@@ -401,7 +458,6 @@ export class QueuePage implements OnInit {
     await alert.present();
   }
 
-  /** Strip base URL host/protocol from the URL for display. */
   protected shortPath(url: string): string {
     try {
       const u = new URL(url);
@@ -411,10 +467,6 @@ export class QueuePage implements OnInit {
     }
   }
 
-  /**
-   * Friendly relative timestamp like "3m ago" or "in 12s". Uses Intl
-   * RelativeTimeFormat for i18n correctness.
-   */
   protected formatRel(iso: string): string {
     const t = new Date(iso).getTime();
     if (!Number.isFinite(t)) return '';

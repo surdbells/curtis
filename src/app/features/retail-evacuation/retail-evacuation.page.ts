@@ -37,32 +37,95 @@ import type { Retailer, RetailerBranch } from '../../core/models';
   imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
+      :host { display: block; }
+      ion-content { --background: var(--curtis-bg); }
+      ion-list { background: transparent; margin: 0 var(--curtis-space-3); }
+      ion-list[inset] ion-item {
+        --background: var(--curtis-surface-1);
+        --border-color: var(--curtis-border);
+        --min-height: 56px;
+      }
+      .section-label {
+        margin: var(--curtis-space-4) var(--curtis-space-5) var(--curtis-space-1);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        color: var(--curtis-text-subtle);
+      }
+
       .preview {
-        margin: 1rem; border-radius: 12px; overflow: hidden;
-        background: var(--ion-color-light);
-        display: flex; align-items: center; justify-content: center;
-        min-height: 200px;
+        margin: 0 var(--curtis-space-4);
+        border-radius: var(--curtis-radius-lg);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        overflow: hidden;
+        min-height: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--curtis-shadow-xs);
       }
-      .preview img { width: 100%; display: block; }
-      .preview .placeholder {
-        color: var(--ion-color-medium); padding: 2rem; text-align: center;
+      .preview img {
+        width: 100%;
+        display: block;
+        object-fit: cover;
       }
-      .actions { padding: 1rem; display: grid; gap: 0.5rem; }
+      .placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--curtis-space-2);
+        padding: var(--curtis-space-6);
+        text-align: center;
+      }
+      .placeholder__well {
+        width: 64px;
+        height: 64px;
+        border-radius: var(--curtis-radius-xl);
+        background: var(--curtis-surface-2);
+        color: var(--curtis-text-muted);
+        display: grid;
+        place-items: center;
+      }
+      .placeholder__text {
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text-muted);
+      }
+
+      .actions {
+        padding: var(--curtis-space-4) var(--curtis-space-4)
+                 calc(var(--curtis-space-8) + env(safe-area-inset-bottom, 0));
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-2);
+      }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header [translucent]="true">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard" />
+          <ion-back-button defaultHref="/dashboard"></ion-back-button>
         </ion-buttons>
         <ion-title>Retail evacuation</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content [fullscreen]="true">
       <curtis-offline-banner />
 
+      <div class="curtis-form-strip">
+        <div class="curtis-form-strip__icon curtis-form-strip__icon--tertiary">
+          <curtis-icon name="receipt-outline" size="md" />
+        </div>
+        <div class="curtis-form-strip__text">
+          <div class="curtis-form-strip__title">Retail evacuation</div>
+          <div class="curtis-form-strip__sub">Capture retailer info and the receipt photo, then submit.</div>
+        </div>
+      </div>
+
+      <div class="section-label">Retailer</div>
       <ion-list inset>
         <ion-item>
           <ion-select
@@ -91,7 +154,10 @@ import type { Retailer, RetailerBranch } from '../../core/models';
             }
           </ion-select>
         </ion-item>
+      </ion-list>
 
+      <div class="section-label">Details</div>
+      <ion-list inset>
         <ion-item>
           <ion-input
             label="Reference number"
@@ -100,7 +166,6 @@ import type { Retailer, RetailerBranch } from '../../core/models';
             [disabled]="submitting()"
           />
         </ion-item>
-
         <ion-item>
           <ion-textarea
             label="Note (optional)"
@@ -113,20 +178,23 @@ import type { Retailer, RetailerBranch } from '../../core/models';
         </ion-item>
       </ion-list>
 
+      <div class="section-label">Receipt photo</div>
       <div class="preview">
         @if (imageBase64()) {
           <img [src]="'data:image/jpeg;base64,' + imageBase64()" alt="Receipt preview" />
         } @else {
           <div class="placeholder">
-            <curtis-icon name="camera-outline" style="font-size: 3rem;" />
-            <p>No receipt captured yet</p>
+            <div class="placeholder__well">
+              <curtis-icon name="camera-outline" size="lg" [strokeWidth]="1.5" />
+            </div>
+            <div class="placeholder__text">No receipt captured yet</div>
           </div>
         }
       </div>
 
       <div class="actions">
         <ion-button expand="block" fill="outline" (click)="capture()" [disabled]="submitting()">
-          <curtis-icon slot="start" name="camera-outline" />
+          <curtis-icon slot="start" name="camera-outline" size="sm" />
           {{ imageBase64() ? 'Retake' : 'Capture' }} receipt
         </ion-button>
         <ion-button expand="block" [disabled]="!canSubmit() || submitting()" (click)="submit()">
@@ -134,6 +202,7 @@ import type { Retailer, RetailerBranch } from '../../core/models';
             <ion-spinner slot="start" name="crescent" />
             Submitting…
           } @else {
+            <curtis-icon slot="start" name="cloud-upload-outline" size="sm" />
             Submit receipt
           }
         </ion-button>

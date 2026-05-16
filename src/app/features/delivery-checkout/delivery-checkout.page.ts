@@ -29,52 +29,78 @@ import { CurtisIconComponent } from '../../shared/components/icon';
   imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
   styles: [
     `
+      :host { display: block; }
+      ion-content { --background: var(--curtis-bg); }
       .summary {
-        padding: 0.75rem 1rem 0;
-        display: grid;
-        gap: 0.5rem;
+        margin: var(--curtis-space-3) var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+        overflow: hidden;
       }
-      .summary .row {
+      .summary__row {
         display: flex;
         justify-content: space-between;
-        gap: 0.75rem;
-        padding: 0.6rem 0.9rem;
-        background: var(--ion-color-light);
-        border-radius: 10px;
+        align-items: center;
+        padding: var(--curtis-space-3) var(--curtis-space-4);
+        border-bottom: 1px solid var(--curtis-border);
       }
-      .summary .label {
-        color: var(--ion-color-medium);
-        font-size: 0.8rem;
+      .summary__row:last-child { border-bottom: none; }
+      .summary__label {
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text-muted);
+        font-weight: var(--curtis-weight-medium);
       }
-      .summary .value {
-        font-weight: 600;
+      .summary__value {
+        font-weight: var(--curtis-weight-semibold);
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text);
+        font-variant-numeric: tabular-nums;
       }
       .warning {
-        margin: 0.75rem 1rem;
-        padding: 0.9rem 1rem;
-        border-radius: 10px;
-        background: var(--ion-color-warning);
-        color: var(--ion-color-warning-contrast);
-        font-size: 0.85rem;
+        margin: var(--curtis-space-3) var(--curtis-space-4);
+        padding: var(--curtis-space-3) var(--curtis-space-4);
+        background: color-mix(in srgb, var(--ion-color-warning) 14%, transparent);
+        color: var(--amber-500);
+        border: 1px solid color-mix(in srgb, var(--ion-color-warning) 30%, transparent);
+        border-radius: var(--curtis-radius-md);
+        font-size: var(--curtis-text-sm);
+        display: flex;
+        gap: var(--curtis-space-2);
+        align-items: center;
+      }
+      ion-list { background: transparent; margin: 0 var(--curtis-space-3); }
+      ion-list[inset] ion-item {
+        --background: var(--curtis-surface-1);
+        --border-color: var(--curtis-border);
+      }
+      .section-label {
+        margin: var(--curtis-space-4) var(--curtis-space-5) var(--curtis-space-1);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+        letter-spacing: var(--curtis-tracking-wider);
+        text-transform: uppercase;
+        color: var(--curtis-text-subtle);
       }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header [translucent]="true">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/signature" />
+          <ion-back-button defaultHref="/signature"></ion-back-button>
         </ion-buttons>
         <ion-title>Check out</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content [fullscreen]="true">
       <curtis-offline-banner />
 
       @if (!deliveryStore.canCheckOut()) {
         <div class="warning">
-          <curtis-icon name="warning-outline" />
+          <curtis-icon name="warning-outline" size="sm" />
           @if (!deliveryStore.isCheckedIn()) {
             Not checked in. Complete check-in first.
           } @else if (!deliveryStore.hasSignature()) {
@@ -84,39 +110,49 @@ import { CurtisIconComponent } from '../../shared/components/icon';
           }
         </div>
       } @else {
-        <div class="summary">
-          <div class="row">
-            <span class="label">Bank</span>
-            <span class="value">{{ deliveryStore.bankId() || '—' }}</span>
+        <div class="curtis-form-strip">
+          <div class="curtis-form-strip__icon">4</div>
+          <div class="curtis-form-strip__text">
+            <div class="curtis-form-strip__title">Confirm and check out</div>
+            <div class="curtis-form-strip__sub">Review the delivery summary, then complete the stop.</div>
           </div>
-          <div class="row">
-            <span class="label">Branch</span>
-            <span class="value">{{ deliveryStore.branchId() || '—' }}</span>
+        </div>
+
+        <div class="section-label">Summary</div>
+        <div class="summary">
+          <div class="summary__row">
+            <span class="summary__label">Bank</span>
+            <span class="summary__value">{{ deliveryStore.bankId() || '—' }}</span>
+          </div>
+          <div class="summary__row">
+            <span class="summary__label">Branch</span>
+            <span class="summary__value">{{ deliveryStore.branchId() || '—' }}</span>
           </div>
           @if (deliveryStore.state()) {
-            <div class="row">
-              <span class="label">State</span>
-              <span class="value">{{ deliveryStore.state() }}</span>
+            <div class="summary__row">
+              <span class="summary__label">State</span>
+              <span class="summary__value">{{ deliveryStore.state() }}</span>
             </div>
           }
-          <div class="row">
-            <span class="label">Checked in</span>
-            <span class="value">{{ (deliveryStore.checkInAt() | date: 'short') || '—' }}</span>
+          <div class="summary__row">
+            <span class="summary__label">Checked in</span>
+            <span class="summary__value">{{ (deliveryStore.checkInAt() | date: 'short') || '—' }}</span>
           </div>
-          <div class="row">
-            <span class="label">Process</span>
-            <span class="value">
+          <div class="summary__row">
+            <span class="summary__label">Process</span>
+            <span class="summary__value">
               {{ deliveryStore.processComplete() ? 'Complete' : 'Skipped' }}
             </span>
           </div>
-          <div class="row">
-            <span class="label">Signature</span>
-            <span class="value">
+          <div class="summary__row">
+            <span class="summary__label">Signature</span>
+            <span class="summary__value">
               {{ deliveryStore.hasSignature() ? 'Captured' : 'Missing' }}
             </span>
           </div>
         </div>
 
+        <div class="section-label">Closing note</div>
         <ion-list inset>
           <ion-item>
             <ion-textarea
@@ -130,7 +166,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
           </ion-item>
         </ion-list>
 
-        <div class="ion-padding">
+        <div class="curtis-submit-zone">
           <ion-button
             expand="block"
             color="primary"
@@ -141,6 +177,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
               <ion-spinner slot="start" name="crescent" />
               Checking out…
             } @else {
+              <curtis-icon slot="start" name="checkmark-circle-outline" size="sm" />
               Confirm check-out
             }
           </ion-button>

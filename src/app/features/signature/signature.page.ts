@@ -29,46 +29,51 @@ import { SignaturePadComponent } from '../../shared/components/signature-pad/sig
   imports: [CommonModule, IonicModule, OfflineBannerComponent, SignaturePadComponent, CurtisIconComponent],
   styles: [
     `
-      .note {
-        padding: 0 1rem;
-        color: var(--ion-color-medium);
-        font-size: 0.85rem;
+      :host { display: block; }
+      ion-content { --background: var(--curtis-bg); }
+      .warning {
+        margin: var(--curtis-space-3) var(--curtis-space-4);
+        padding: var(--curtis-space-3) var(--curtis-space-4);
+        background: color-mix(in srgb, var(--ion-color-warning) 14%, transparent);
+        color: var(--amber-500);
+        border: 1px solid color-mix(in srgb, var(--ion-color-warning) 30%, transparent);
+        border-radius: var(--curtis-radius-md);
+        font-size: var(--curtis-text-sm);
+        display: flex;
+        gap: var(--curtis-space-2);
+        align-items: center;
       }
       .pad-wrap {
-        padding: 1rem;
-      }
-      .warning {
-        margin: 0.75rem 1rem;
-        padding: 0.9rem 1rem;
-        border-radius: 10px;
-        background: var(--ion-color-warning);
-        color: var(--ion-color-warning-contrast);
-        font-size: 0.85rem;
+        padding: var(--curtis-space-3) var(--curtis-space-4);
       }
     `,
   ],
   template: `
-    <ion-header translucent>
+    <ion-header [translucent]="true">
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/process" />
+          <ion-back-button defaultHref="/process"></ion-back-button>
         </ion-buttons>
         <ion-title>Signature</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content [fullscreen]="true">
       <curtis-offline-banner />
 
       @if (!deliveryStore.isCheckedIn()) {
         <div class="warning">
-          <curtis-icon name="warning-outline" /> Not checked in. Return and check in first.
+          <curtis-icon name="warning-outline" size="sm" />
+          Not checked in. Return and check in first.
         </div>
       } @else {
-        <p class="note">
-          Ask the receiving teller to sign below. A signature is required
-          to complete this delivery.
-        </p>
+        <div class="curtis-form-strip">
+          <div class="curtis-form-strip__icon">3</div>
+          <div class="curtis-form-strip__text">
+            <div class="curtis-form-strip__title">Capture teller signature</div>
+            <div class="curtis-form-strip__sub">Ask the receiving teller to sign below to complete the delivery.</div>
+          </div>
+        </div>
 
         <div class="pad-wrap">
           <curtis-signature-pad
@@ -77,7 +82,7 @@ import { SignaturePadComponent } from '../../shared/components/signature-pad/sig
           />
         </div>
 
-        <div class="ion-padding">
+        <div class="curtis-submit-zone">
           <ion-button
             expand="block"
             [disabled]="!hasStroke() || submitting()"
@@ -88,6 +93,7 @@ import { SignaturePadComponent } from '../../shared/components/signature-pad/sig
               Saving signature…
             } @else {
               Save signature & continue
+              <curtis-icon slot="end" name="arrow-forward-outline" size="sm" />
             }
           </ion-button>
         </div>
