@@ -3,6 +3,7 @@ export * from './actions.model';
 export * from './auth.model';
 export * from './device-post.dto';
 export * from './device-context.model';
+export * from './incident.model';
 export * from './route.model';
 export * from './truck.model';
 export * from './bank.model';

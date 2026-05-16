@@ -27,4 +27,5 @@ export * from './tracker.service';
 export * from './theme.service';
 export * from './truck.service';
 export * from './evacuation.service';
+export * from './incident.service';
 export * from './xml-loader.service';

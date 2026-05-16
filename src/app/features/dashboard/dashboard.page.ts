@@ -26,6 +26,8 @@ import { RouteService } from '../../core/services/route.service';
 import { DayService } from '../../core/services/day.service';
 import { ReferenceCacheService } from '../../core/services/reference-cache.service';
 import { ConnectivityService } from '../../core/services/connectivity.service';
+import { BatteryService } from '../../core/services/battery.service';
+import { TrackerService } from '../../core/services/tracker.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import type { Truck, Route } from '../../core/models';
 
@@ -91,6 +93,21 @@ const CACHE_KEY_ROUTE = 'phase3.route';
         box-shadow: 0 0 0 0 currentColor;
         animation: dot 1.8s ease-out infinite;
       }
+      .battery-warn {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        font-size: 0.7rem; font-weight: 600;
+        margin-top: 0.3rem;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(251, 191, 36, 0.2);
+        color: #FBBF24;
+        align-self: flex-start;
+      }
+      .battery-warn.critical {
+        background: rgba(248, 113, 113, 0.22);
+        color: #F87171;
+      }
+      .battery-warn ion-icon { font-size: 0.85rem; }
       @keyframes dot {
         0%   { box-shadow: 0 0 0 0 rgba(229, 192, 74, 0.6); }
         100% { box-shadow: 0 0 0 9px rgba(229, 192, 74, 0); }
@@ -198,6 +215,34 @@ const CACHE_KEY_ROUTE = 'phase3.route';
         padding: 2rem 1rem; text-align: center;
         color: var(--curtis-text-subtle);
       }
+
+      /* SOS — floating action button, bottom-right, always visible */
+      .sos-fab {
+        position: fixed;
+        right: 1rem;
+        bottom: 1rem;
+        width: 64px; height: 64px;
+        border-radius: 50%;
+        background: var(--ion-color-danger);
+        color: var(--ion-color-danger-contrast);
+        display: grid; place-items: center;
+        text-decoration: none;
+        font-weight: 800; font-size: 0.85rem;
+        letter-spacing: 0.05em;
+        box-shadow:
+          0 8px 24px rgba(220, 38, 38, 0.45),
+          0 0 0 0 rgba(220, 38, 38, 0.4);
+        z-index: 20;
+        animation: sos-pulse 2.2s ease-out infinite;
+        transition: transform 120ms ease-out;
+      }
+      .sos-fab:active { transform: scale(0.94); }
+      .sos-fab ion-icon { font-size: 1.6rem; }
+      @keyframes sos-pulse {
+        0%   { box-shadow: 0 8px 24px rgba(220, 38, 38, 0.45), 0 0 0 0   rgba(220, 38, 38, 0.45); }
+        70%  { box-shadow: 0 8px 24px rgba(220, 38, 38, 0.45), 0 0 0 14px rgba(220, 38, 38, 0);    }
+        100% { box-shadow: 0 8px 24px rgba(220, 38, 38, 0.45), 0 0 0 0   rgba(220, 38, 38, 0);    }
+      }
     `,
   ],
   template: `
@@ -235,7 +280,17 @@ const CACHE_KEY_ROUTE = 'phase3.route';
             @if (day.dayActive()) {
               <span class="pulse">
                 <span class="pulse-dot"></span>
-                Tracking
+                Tracking · {{ tracker.pingCount() }} pings
+              </span>
+            }
+            @if (battery.isLow() || battery.isCritical()) {
+              <span class="battery-warn" [class.critical]="battery.isCritical()">
+                <ion-icon name="battery-half-outline" />
+                @if (battery.isCritical()) {
+                  Battery critical{{ battery.level() !== null ? ' · ' + battery.level() + '%' : '' }}
+                } @else {
+                  Low battery{{ battery.level() !== null ? ' · ' + battery.level() + '%' : '' }}
+                }
               </span>
             }
           </div>
@@ -324,6 +379,15 @@ const CACHE_KEY_ROUTE = 'phase3.route';
           }
         }
       </div>
+
+      <!-- SOS — always visible, floats above tile grid. Tapping prompts a
+           confirmation, then routes to /incident?sos=1 which pre-fills the
+           form with high-urgency defaults. The photo capture step on the
+           Incident page acts as a deliberate confirm-by-action gate so a
+           pocket-tap can't actually submit a Robbery alert. -->
+      <a class="sos-fab" (click)="onSos($event)">
+        <ion-icon name="warning-outline" />
+      </a>
     </ion-content>
   `,
 })
@@ -332,6 +396,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   protected readonly day = inject(DayStore);
   protected readonly truck = inject(TruckStore);
   protected readonly routeStore = inject(RouteStore);
+  protected readonly battery = inject(BatteryService);
+  protected readonly tracker = inject(TrackerService);
   private readonly auth = inject(AuthService);
   private readonly trucks = inject(TruckService);
   private readonly routes = inject(RouteService);
@@ -416,6 +482,36 @@ export class DashboardPage implements OnInit, OnDestroy {
       }
       void this.confirmLogout();
     });
+  }
+
+  /**
+   * SOS button handler. Haptics warning, then confirms before navigating
+   * to the Incident page in SOS mode. The photo capture step on that page
+   * is the real submission gate — a pocket-tap of this FAB cannot fire
+   * an actual alert to dispatch.
+   */
+  async onSos(event: Event): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+    await this.haptic('warning');
+
+    const alert = await this.alerts.create({
+      header: 'Send SOS?',
+      message:
+        'This will open a high-priority incident report. You will need to capture a photo before it submits.',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Open SOS report',
+          role: 'destructive',
+          handler: () => {
+            void this.router.navigateByUrl('/incident?sos=1');
+            return true;
+          },
+        },
+      ],
+    });
+    await alert.present();
   }
 
   async promptStartDay(): Promise<void> {
@@ -560,11 +656,12 @@ export class DashboardPage implements OnInit, OnDestroy {
     return fallback;
   }
 
-  private async haptic(kind: 'success' | 'error' | 'tap'): Promise<void> {
+  private async haptic(kind: 'success' | 'error' | 'tap' | 'warning'): Promise<void> {
     if (!Capacitor.isNativePlatform()) return;
     try {
       if (kind === 'success') await Haptics.notification({ type: NotificationType.Success });
       else if (kind === 'error') await Haptics.notification({ type: NotificationType.Error });
+      else if (kind === 'warning') await Haptics.notification({ type: NotificationType.Warning });
       else await Haptics.impact({ style: ImpactStyle.Light });
     } catch { /* ignore */ }
   }
