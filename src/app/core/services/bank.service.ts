@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom, Observable, from, of, switchMap, tap } from 'rxjs';
+import { firstValueFrom, Observable, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { ReferenceCacheService } from './reference-cache.service';
+import { XmlLoaderService } from './xml-loader.service';
 import type { Bank, Branch, Client } from '../models';
 
 const CACHE_KEY_BANKS = 'phase4.banks';
@@ -12,17 +13,21 @@ const CACHE_KEY_BRANCHES = (state: string, clientType: string) =>
 /**
  * Wraps the bank / client / branch endpoints on the TrackingApi.
  *
- * All reads are cached via ReferenceCacheService so the agent can still
- * pick a bank and branch while offline — the cache is refreshed on every
- * successful fetch.
+ * Three-layer resolution for offline-first behaviour:
+ *   1. SQLite reference cache (most recent successful fetch)
+ *   2. Live API (when online; populates cache on success)
+ *   3. Bundled XML manifest (banks.xml / branches.xml) as a last-resort
+ *      offline fallback. Source: legacy CurtisTracker assets.
  *
- * TODO(phase-4-samples): tighten Bank, Branch, and Client models once
- * backend provides real response samples.
+ * The XML fallback is bank-only — branches.xml does not encode state,
+ * so getBranchesByStateWithCache falls back to filtering by bank id
+ * instead when a state-keyed branch list is unavailable.
  */
 @Injectable({ providedIn: 'root' })
 export class BankService {
   private readonly api = inject(ApiService);
   private readonly cache = inject(ReferenceCacheService);
+  private readonly xml = inject(XmlLoaderService);
 
   /** GET /GetBanks — returns all banks. */
   getBanks(): Observable<Bank[]> {
@@ -33,12 +38,18 @@ export class BankService {
 
   async getBanksWithCache(): Promise<Bank[]> {
     const cached = (await this.cache.get<Bank[]>(CACHE_KEY_BANKS)) ?? [];
-    try {
-      const fresh = await firstValueFrom(this.getBanks());
-      return fresh ?? cached;
-    } catch {
+    if (cached.length > 0) {
+      // Still fire a background refresh.
+      void firstValueFrom(this.getBanks()).catch(() => undefined);
       return cached;
     }
+    try {
+      const fresh = await firstValueFrom(this.getBanks());
+      if (fresh && fresh.length > 0) return fresh;
+    } catch {
+      // fall through to XML
+    }
+    return this.xml.loadBanks();
   }
 
   /**
@@ -75,11 +86,27 @@ export class BankService {
   async getBranchesByStateWithCache(state: string, clientType: string = 'Bank'): Promise<Branch[]> {
     const key = CACHE_KEY_BRANCHES(state, clientType);
     const cached = (await this.cache.get<Branch[]>(key)) ?? [];
-    try {
-      const fresh = await firstValueFrom(this.getBranchesByState(state, clientType));
-      return fresh ?? cached;
-    } catch {
+    if (cached.length > 0) {
+      void firstValueFrom(this.getBranchesByState(state, clientType)).catch(() => undefined);
       return cached;
     }
+    try {
+      const fresh = await firstValueFrom(this.getBranchesByState(state, clientType));
+      if (fresh && fresh.length > 0) return fresh;
+    } catch {
+      // fall through
+    }
+    // XML fallback — branches.xml is keyed by bank, not state, so we can
+    // only return the full list. Callers can filter further client-side.
+    return this.xml.loadBranches();
+  }
+
+  /**
+   * Get branches for a specific bank. Bypasses the state cascade entirely;
+   * useful for the manual-evacuation flow which picks bank then branch.
+   * Always uses the XML fallback because no API endpoint exists for this.
+   */
+  async getBranchesForBank(bankId: string): Promise<Branch[]> {
+    return this.xml.loadBranchesForBank(bankId);
   }
 }

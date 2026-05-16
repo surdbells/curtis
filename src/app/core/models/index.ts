@@ -7,5 +7,6 @@ export * from './route.model';
 export * from './truck.model';
 export * from './bank.model';
 export * from './nigerian-states';
+export * from './retailer.model';
 export * from './seal.model';
 export * from './queued-request.model';

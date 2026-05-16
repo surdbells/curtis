@@ -49,9 +49,11 @@ export class DayService {
 
   async start(input: StartDayInput): Promise<void> {
     const coords = await this.location.tryGetCurrent();
+    const timestamp = nowIsoUtc();
     const dto = await this.builder.build({
       action: ACTION.START_DAY,
       status: STATUS.OK,
+      utcDateTime: timestamp,
       truckid: input.truckId,
       routeid: input.routeId,
       mileage: input.mileage,
@@ -67,7 +69,7 @@ export class DayService {
       routeId: input.routeId,
       mileage: input.mileage,
       gasLevel: input.gasLevel,
-      timestamp: dto.utcDateTime ?? nowIsoUtc(),
+      timestamp,
     });
 
     // Background GPS — phase-6 skeleton. Safe to call now; does nothing yet.
