@@ -92,8 +92,13 @@ export const routes: Routes = [
   },
   {
     path: 'incident',
-    canActivate: [authGuard, dayStartedGuard],
+    canActivate: [authGuard],
     loadComponent: () => import('./features/incident/incident.page').then((m) => m.IncidentPage),
+  },
+  {
+    path: 'queue',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/queue/queue.page').then((m) => m.QueuePage),
   },
 
   { path: '**', redirectTo: 'splash' },
