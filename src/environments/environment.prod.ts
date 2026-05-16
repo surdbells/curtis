@@ -15,5 +15,5 @@ export const environment = {
   /** Sentry — TODO: paste the production project's DSN here (or inject at build time). */
   sentryDsn: '',
   sentryTracesSampleRate: 0.1, // 10% of transactions in prod
-  sentryRelease: 'curtis@0.0.1+prod',
+  sentryRelease: 'curtis@0.1.0+prod',
 };

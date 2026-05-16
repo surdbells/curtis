@@ -25,6 +25,11 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/auth/biometric-unlock/biometric-unlock.page').then((m) => m.BiometricUnlockPage),
   },
+  {
+    path: 'onboarding',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/onboarding/onboarding.page').then((m) => m.OnboardingPage),
+  },
 
   {
     path: 'dashboard',

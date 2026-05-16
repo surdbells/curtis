@@ -5,6 +5,7 @@ import { StorageService } from './services/storage.service';
 import { ThemeService } from './services/theme.service';
 import { BatteryService } from './services/battery.service';
 import { OfflineQueueService } from './services/offline-queue.service';
+import { OnboardingService } from './services/onboarding.service';
 import { ErrorReportingService } from './services/error-reporting.service';
 
 /**
@@ -31,6 +32,7 @@ export const appInitializerProvider = provideAppInitializer(async () => {
   const tokens = inject(TokenService);
   const battery = inject(BatteryService);
   const queue = inject(OfflineQueueService);
+  const onboarding = inject(OnboardingService);
 
   try {
     errorReporting.init();
@@ -85,5 +87,13 @@ export const appInitializerProvider = provideAppInitializer(async () => {
     // eslint-disable-next-line no-console
     console.warn('Offline queue worker init failed', err);
     errorReporting.captureError(err, { feature: 'queue.start' });
+  }
+
+  try {
+    await onboarding.hydrate();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('Onboarding hydrate failed', err);
+    errorReporting.captureError(err, { feature: 'onboarding.hydrate' });
   }
 });

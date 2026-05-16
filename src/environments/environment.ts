@@ -46,5 +46,5 @@ export const environment = {
    */
   sentryDsn: '',
   sentryTracesSampleRate: 0,
-  sentryRelease: 'curtis@0.0.1+dev',
+  sentryRelease: 'curtis@0.1.0+dev',
 };

@@ -6,6 +6,7 @@ import { IonicModule, ToastController } from '@ionic/angular';
 import { BiometricService } from '../../../core/services/biometric.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PushService } from '../../../core/services/push.service';
+import { OnboardingService } from '../../../core/services/onboarding.service';
 
 /**
  * Biometric unlock page.
@@ -79,6 +80,7 @@ export class BiometricUnlockPage implements OnInit {
   private readonly biometric = inject(BiometricService);
   private readonly auth = inject(AuthService);
   private readonly push = inject(PushService);
+  private readonly onboarding = inject(OnboardingService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastController);
 
@@ -117,7 +119,8 @@ export class BiometricUnlockPage implements OnInit {
 
       // Fire-and-forget push registration after a silent re-auth.
       void this.push.register().catch(() => undefined);
-      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+      const target = this.onboarding.completed() ? '/dashboard' : '/onboarding';
+      await this.router.navigateByUrl(target, { replaceUrl: true });
     } catch {
       // Biometric cancel, failure, or silent login failure — stay on page so
       // the user can retry or fall back to password.

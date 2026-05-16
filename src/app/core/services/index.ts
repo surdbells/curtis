@@ -14,6 +14,7 @@ export * from './error-reporting.service';
 export * from './ip-lookup.service';
 export * from './location.service';
 export * from './offline-queue.service';
+export * from './onboarding.service';
 export * from './push.service';
 export * from './reference-cache.service';
 export * from './retailer.service';

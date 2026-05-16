@@ -1,6 +1,6 @@
 {
   "name": "curtis-client",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Ionic Framework",
   "homepage": "https://ionicframework.com/",
   "scripts": {
@@ -26,6 +26,7 @@
     "@capacitor-mlkit/barcode-scanning": "^7.5.0",
     "@capacitor/android": "^8.3.1",
     "@capacitor/app": "8.1.0",
+    "@capacitor/app-launcher": "^8.0.1",
     "@capacitor/camera": "^8.1.0",
     "@capacitor/core": "8.3.1",
     "@capacitor/device": "^8.0.2",

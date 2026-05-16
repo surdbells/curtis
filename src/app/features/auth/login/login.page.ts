@@ -10,6 +10,7 @@ import { Capacitor } from '@capacitor/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { TokenService } from '../../../core/services/token.service';
 import { PushService } from '../../../core/services/push.service';
+import { OnboardingService } from '../../../core/services/onboarding.service';
 
 @Component({
   selector: 'curtis-login',
@@ -168,6 +169,7 @@ export class LoginPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly tokens = inject(TokenService);
   private readonly push = inject(PushService);
+  private readonly onboarding = inject(OnboardingService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastController);
 
@@ -206,10 +208,12 @@ export class LoginPage implements OnInit {
       });
 
       await this.haptic(NotificationType.Success);
-      // Fire-and-forget push registration. Permission prompt may appear;
-      // login navigation is not blocked on the result.
+      // Decide route: first-time agents go through onboarding; returning
+      // agents go straight to the dashboard. Push registration is fired
+      // and forgotten — the onboarding flow will retry if needed.
       void this.push.register().catch(() => undefined);
-      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+      const target = this.onboarding.completed() ? '/dashboard' : '/onboarding';
+      await this.router.navigateByUrl(target, { replaceUrl: true });
     } catch (err) {
       await this.haptic(NotificationType.Error);
       await this.showToast(this.describeError(err), 'danger');
