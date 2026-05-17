@@ -15,6 +15,7 @@ import { BankService } from '../../core/services/bank.service';
 import { DeliveryService } from '../../core/services/delivery.service';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisHeaderComponent } from '../../shared/components/header';
 import { NIGERIAN_STATES } from '../../core/models/nigerian-states';
 import type { Bank, Branch } from '../../core/models';
 
@@ -41,7 +42,7 @@ import type { Bank, Branch } from '../../core/models';
   selector: 'curtis-delivery',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent],
+  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisHeaderComponent],
   styles: [
     `
       :host { display: block; }
@@ -105,14 +106,7 @@ import type { Bank, Branch } from '../../core/models';
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/daily"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Delivery</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header title="Delivery" backHref="/daily" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />

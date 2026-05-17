@@ -9,6 +9,7 @@ import { RouteStore } from '../../core/stores/route.store';
 import { DeliveryStore } from '../../core/stores/delivery.store';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
+import { CurtisHeaderComponent } from '../../shared/components/header';
 import type { RouteStop } from '../../core/models';
 
 /**
@@ -27,7 +28,7 @@ import type { RouteStop } from '../../core/models';
   selector: 'curtis-daily',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, OfflineBannerComponent, CurtisIconComponent],
+  imports: [CommonModule, IonicModule, OfflineBannerComponent, CurtisIconComponent, CurtisHeaderComponent],
   styles: [
     `
       :host { display: block; }
@@ -194,14 +195,7 @@ import type { RouteStop } from '../../core/models';
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Today's stops</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header title="Today's stops" backHref="/dashboard" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />

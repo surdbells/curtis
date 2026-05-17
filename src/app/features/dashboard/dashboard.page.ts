@@ -30,6 +30,11 @@ import { BatteryService } from '../../core/services/battery.service';
 import { TrackerService } from '../../core/services/tracker.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
+import {
+  CurtisHeaderComponent,
+  CurtisHeaderActionComponent,
+  CurtisHeaderStatusComponent,
+} from '../../shared/components/header';
 import type { Truck, Route } from '../../core/models';
 
 interface Tile {
@@ -66,47 +71,20 @@ const CACHE_KEY_ROUTE = 'phase3.route';
   selector: 'curtis-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, RouterLink, OfflineBannerComponent, CurtisIconComponent],
+  imports: [
+    CommonModule,
+    IonicModule,
+    RouterLink,
+    OfflineBannerComponent,
+    CurtisIconComponent,
+    CurtisHeaderComponent,
+    CurtisHeaderActionComponent,
+    CurtisHeaderStatusComponent,
+  ],
   styles: [
     `
       :host { display: block; }
       ion-content { --background: var(--curtis-bg); }
-
-      /* --- Header --- */
-      ion-header.curtis-header ion-toolbar {
-        --background: var(--curtis-bg);
-        --border-color: transparent;
-        --border-width: 0;
-        padding-top: env(safe-area-inset-top, 0);
-      }
-      .greeting {
-        display: flex; flex-direction: column;
-        padding-left: var(--curtis-space-2);
-      }
-      .greeting__label {
-        font-size: var(--curtis-text-xs);
-        color: var(--curtis-text-subtle);
-        letter-spacing: var(--curtis-tracking-wide);
-        text-transform: uppercase;
-        font-weight: var(--curtis-weight-semibold);
-      }
-      .greeting__name {
-        font-size: var(--curtis-text-md);
-        font-weight: var(--curtis-weight-bold);
-        color: var(--curtis-text);
-      }
-
-      .icon-button {
-        background: var(--curtis-surface-1);
-        border: 1px solid var(--curtis-border);
-        border-radius: var(--curtis-radius-pill);
-        width: 40px; height: 40px;
-        display: grid; place-items: center;
-        color: var(--curtis-text);
-        cursor: pointer;
-        transition: background var(--curtis-duration-fast) var(--curtis-ease-out);
-      }
-      .icon-button:hover { background: var(--curtis-surface-2); }
 
       /* --- Hero card (day status) --- */
       .hero {
@@ -375,19 +353,22 @@ const CACHE_KEY_ROUTE = 'phase3.route';
     `,
   ],
   template: `
-    <ion-header class="curtis-header" [translucent]="false">
-      <ion-toolbar>
-        <div slot="start" class="greeting">
-          <span class="greeting__label">CurTIS</span>
-          <span class="greeting__name">{{ greeting() }}</span>
-        </div>
-        <ion-buttons slot="end">
-          <button class="icon-button" [routerLink]="['/settings']" aria-label="Settings">
-            <curtis-icon name="settings-outline" size="sm" />
-          </button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header
+      [title]="greeting()"
+      [showBack]="false"
+    >
+      <curtis-header-status
+        slot="status"
+        [variant]="day.dayActive() ? 'success' : 'neutral'"
+        [label]="day.dayActive() ? 'On shift' : 'Ready'"
+      />
+      <curtis-header-action
+        slot="end"
+        icon="settings-outline"
+        ariaLabel="Open settings"
+        routerLink="/settings"
+      />
+    </curtis-header>
 
     <ion-content [fullscreen]="true">
       <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">

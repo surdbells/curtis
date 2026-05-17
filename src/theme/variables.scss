@@ -199,6 +199,22 @@
   --curtis-gradient-surface: linear-gradient(180deg, #FFFFFF 0%, var(--slate-50) 100%);
   --curtis-gradient-hero:    linear-gradient(135deg, var(--navy-900) 0%, var(--navy-700) 50%, var(--navy-500) 100%);
 
+  // Custom header tokens (Option A — navy gradient).
+  // Centralised here so the entire header chrome can be re-themed in one place
+  // (e.g. for a future light-mode hero variant, or per-tenant brand override).
+  --curtis-header-bg:               var(--curtis-gradient-hero);
+  --curtis-header-fg:               var(--curtis-text-inverse);
+  --curtis-header-fg-muted:         rgba(255, 255, 255, 0.78);
+  --curtis-header-fg-subtle:        rgba(255, 255, 255, 0.60);
+  --curtis-header-control-bg:       rgba(255, 255, 255, 0.12);
+  --curtis-header-control-bg-hover: rgba(255, 255, 255, 0.20);
+  --curtis-header-control-border:   rgba(255, 255, 255, 0.18);
+  --curtis-header-pill-bg:          rgba(255, 255, 255, 0.14);
+  --curtis-header-pill-border:      rgba(255, 255, 255, 0.22);
+  --curtis-header-divider:          rgba(255, 255, 255, 0.16);
+  --curtis-header-search-bg:        rgba(255, 255, 255, 0.10);
+  --curtis-header-search-border:    rgba(255, 255, 255, 0.18);
+
   // -----------------------------------------------------------------------------
   // 5. IONIC PALETTE BRIDGE (light)
   // -----------------------------------------------------------------------------

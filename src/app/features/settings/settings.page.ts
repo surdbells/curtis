@@ -24,6 +24,7 @@ import { TruckStore } from '../../core/stores/truck.store';
 import { RouteStore } from '../../core/stores/route.store';
 import { ErrorReportingService } from '../../core/services/error-reporting.service';
 import { CurtisIconComponent } from '../../shared/components/icon';
+import { CurtisHeaderComponent } from '../../shared/components/header';
 
 /**
  * Settings — Phase 9 premium redesign.
@@ -46,7 +47,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
   selector: 'curtis-settings',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, CurtisIconComponent],
+  imports: [CommonModule, IonicModule, FormsModule, CurtisIconComponent, CurtisHeaderComponent],
   styles: [
     `
       :host { display: block; }
@@ -175,14 +176,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Settings</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header title="Settings" backHref="/dashboard" />
 
     <ion-content [fullscreen]="true">
       <div class="stage">

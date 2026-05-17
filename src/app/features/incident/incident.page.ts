@@ -20,6 +20,10 @@ import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
 import {
+  CurtisHeaderComponent,
+  CurtisHeaderStatusComponent,
+} from '../../shared/components/header';
+import {
   INCIDENT_TYPES,
   INCIDENT_SEVERITIES,
   SOS_INCIDENT,
@@ -43,7 +47,15 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
   selector: 'curtis-incident',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
+  imports: [
+    CommonModule,
+    IonicModule,
+    FormsModule,
+    OfflineBannerComponent,
+    CurtisIconComponent,
+    CurtisHeaderComponent,
+    CurtisHeaderStatusComponent,
+  ],
   styles: [
     `
       :host { display: block; }
@@ -211,14 +223,18 @@ import type { IncidentSeverity, IncidentType } from '../../core/models';
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar [color]="sosMode() ? 'danger' : undefined">
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>{{ sosMode() ? 'SOS — Report incident' : 'Report incident' }}</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header
+      [title]="sosMode() ? 'SOS — Report incident' : 'Report incident'"
+      backHref="/dashboard"
+    >
+      @if (sosMode()) {
+        <curtis-header-status
+          slot="status"
+          variant="danger"
+          label="SOS active"
+        />
+      }
+    </curtis-header>
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />

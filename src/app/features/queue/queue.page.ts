@@ -13,6 +13,12 @@ import { OfflineQueueService } from '../../core/services/offline-queue.service';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
+import {
+  CurtisHeaderComponent,
+  CurtisHeaderActionComponent,
+  CurtisHeaderStatusComponent,
+  CurtisHeaderSearchComponent,
+} from '../../shared/components/header';
 import type { QueuedRequest } from '../../core/models';
 
 /**
@@ -34,7 +40,16 @@ import type { QueuedRequest } from '../../core/models';
   selector: 'curtis-queue',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, OfflineBannerComponent, CurtisIconComponent],
+  imports: [
+    CommonModule,
+    IonicModule,
+    OfflineBannerComponent,
+    CurtisIconComponent,
+    CurtisHeaderComponent,
+    CurtisHeaderActionComponent,
+    CurtisHeaderStatusComponent,
+    CurtisHeaderSearchComponent,
+  ],
   styles: [
     `
       :host { display: block; }
@@ -215,14 +230,50 @@ import type { QueuedRequest } from '../../core/models';
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Sync queue</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header title="Sync queue" backHref="/dashboard">
+      @if (queue.pendingCount() > 0) {
+        <curtis-header-status
+          slot="status"
+          variant="info"
+          [label]="'Pending ' + queue.pendingCount()"
+        />
+      } @else if (queue.deadLetterCount() > 0) {
+        <curtis-header-status
+          slot="status"
+          variant="warning"
+          [label]="queue.deadLetterCount() + ' failed'"
+        />
+      } @else {
+        <curtis-header-status
+          slot="status"
+          variant="success"
+          label="All synced"
+        />
+      }
+      @if (queue.pendingCount() > 0 && connectivity.online()) {
+        <curtis-header-action
+          slot="end"
+          icon="cloud-upload-outline"
+          ariaLabel="Drain queue now"
+          [disabled]="queue.draining()"
+          (action)="drainNow()"
+        />
+      }
+      <curtis-header-action
+        slot="end"
+        icon="refresh-outline"
+        ariaLabel="Refresh"
+        (action)="refresh()"
+      />
+      @if (rows().length > 0) {
+        <curtis-header-search
+          slot="search"
+          placeholder="Filter by URL or method"
+          ariaLabel="Filter queue"
+          [(query)]="filter"
+        />
+      }
+    </curtis-header>
 
     <ion-content [fullscreen]="true">
       <ion-refresher slot="fixed" (ionRefresh)="onPullRefresh($event)">
@@ -240,6 +291,20 @@ import type { QueuedRequest } from '../../core/models';
           <div class="empty__body">
             Every request has been synced. Nothing is waiting in the queue.
           </div>
+        </div>
+      } @else if (matchedTotal() === 0) {
+        <div class="empty">
+          <div class="empty__well">
+            <curtis-icon name="search-outline" size="xl" [strokeWidth]="1.5" />
+          </div>
+          <div class="empty__title">No matches</div>
+          <div class="empty__body">
+            No queued requests match "{{ filter() }}". Try a different keyword or clear the filter.
+          </div>
+          <ion-button fill="clear" (click)="filter.set('')">
+            <curtis-icon slot="start" name="close-outline" size="sm" />
+            Clear filter
+          </ion-button>
         </div>
       } @else {
         <!-- Stats -->
@@ -367,13 +432,36 @@ export class QueuePage implements OnInit {
   protected readonly rows = signal<QueuedRequest[]>([]);
   protected readonly loading = signal(false);
 
+  /**
+   * Free-text search filter, two-way bound to the header search input.
+   * Matches against the request URL and method (case-insensitive), so an
+   * agent can find "where's the failed seal submission" by typing
+   * "seals" or "post".
+   */
+  protected readonly filter = signal('');
+
+  /** Lowercased filter, computed once per change for cheaper row matches. */
+  private readonly normalisedFilter = computed(() => this.filter().trim().toLowerCase());
+
+  /** Predicate applied to every row before pending/dead split. */
+  private readonly matchedRows = computed(() => {
+    const q = this.normalisedFilter();
+    if (!q) return this.rows();
+    return this.rows().filter(
+      (r) =>
+        r.url.toLowerCase().includes(q) ||
+        r.method.toLowerCase().includes(q),
+    );
+  });
+
   protected readonly pendingRows = computed(() =>
-    this.rows().filter((r) => r.status !== 'dead_letter'),
+    this.matchedRows().filter((r) => r.status !== 'dead_letter'),
   );
   protected readonly deadRows = computed(() =>
-    this.rows().filter((r) => r.status === 'dead_letter'),
+    this.matchedRows().filter((r) => r.status === 'dead_letter'),
   );
   protected readonly total = computed(() => this.rows().length);
+  protected readonly matchedTotal = computed(() => this.matchedRows().length);
 
   async ngOnInit(): Promise<void> {
     await this.refresh();

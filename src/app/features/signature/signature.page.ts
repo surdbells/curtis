@@ -13,6 +13,7 @@ import { DeliveryStore } from '../../core/stores/delivery.store';
 import { DeliveryService } from '../../core/services/delivery.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
+import { CurtisHeaderComponent } from '../../shared/components/header';
 import { SignaturePadComponent } from '../../shared/components/signature-pad/signature-pad.component';
 
 /**
@@ -26,7 +27,7 @@ import { SignaturePadComponent } from '../../shared/components/signature-pad/sig
   selector: 'curtis-signature',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, OfflineBannerComponent, SignaturePadComponent, CurtisIconComponent],
+  imports: [CommonModule, IonicModule, OfflineBannerComponent, SignaturePadComponent, CurtisIconComponent, CurtisHeaderComponent],
   styles: [
     `
       :host { display: block; }
@@ -49,14 +50,7 @@ import { SignaturePadComponent } from '../../shared/components/signature-pad/sig
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/process"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Signature</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header title="Signature" backHref="/process" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />

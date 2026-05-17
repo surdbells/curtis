@@ -17,6 +17,7 @@ import { EvacuationService } from '../../core/services/evacuation.service';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
+import { CurtisHeaderComponent } from '../../shared/components/header';
 import type { Retailer, RetailerBranch } from '../../core/models';
 
 /**
@@ -34,7 +35,7 @@ import type { Retailer, RetailerBranch } from '../../core/models';
   selector: 'curtis-retail-evacuation',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
+  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent, CurtisHeaderComponent],
   styles: [
     `
       :host { display: block; }
@@ -103,14 +104,7 @@ import type { Retailer, RetailerBranch } from '../../core/models';
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Retail evacuation</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header title="Retail evacuation" backHref="/dashboard" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />

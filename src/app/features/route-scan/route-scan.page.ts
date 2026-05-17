@@ -18,6 +18,7 @@ import { DayStore } from '../../core/stores/day.store';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
+import { CurtisHeaderComponent } from '../../shared/components/header';
 import { SealListComponent } from '../../shared/components/seal-list/seal-list.component';
 import { ScanButtonComponent } from '../../shared/components/scan-button/scan-button.component';
 import type { ScanSession } from '../../core/services/scanner.service';
@@ -44,7 +45,7 @@ import type { Seal } from '../../core/models';
   selector: 'curtis-route-scan',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, OfflineBannerComponent, SealListComponent, ScanButtonComponent, CurtisIconComponent],
+  imports: [CommonModule, IonicModule, OfflineBannerComponent, SealListComponent, ScanButtonComponent, CurtisIconComponent, CurtisHeaderComponent],
   styles: [
     `
       :host { display: block; }
@@ -144,14 +145,7 @@ import type { Seal } from '../../core/models';
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Route seals</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header title="Route seals" backHref="/dashboard" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />

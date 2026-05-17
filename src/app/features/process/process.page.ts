@@ -8,6 +8,7 @@ import { DeliveryStore } from '../../core/stores/delivery.store';
 import { DeliveryService } from '../../core/services/delivery.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
+import { CurtisHeaderComponent } from '../../shared/components/header';
 
 /**
  * Process — Phase 4, second step of the delivery chain.
@@ -23,7 +24,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
   selector: 'curtis-process',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent],
+  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisIconComponent, CurtisHeaderComponent],
   styles: [
     `
       :host { display: block; }
@@ -57,14 +58,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/delivery"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Process</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header title="Process" backHref="/delivery" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />

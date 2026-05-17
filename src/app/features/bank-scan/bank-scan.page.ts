@@ -19,6 +19,7 @@ import { BankService } from '../../core/services/bank.service';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
+import { CurtisHeaderComponent } from '../../shared/components/header';
 import { SealListComponent } from '../../shared/components/seal-list/seal-list.component';
 import { ScanButtonComponent } from '../../shared/components/scan-button/scan-button.component';
 import type { ScanSession } from '../../core/services/scanner.service';
@@ -43,7 +44,7 @@ import type { Bank, Seal } from '../../core/models';
     FormsModule,
     OfflineBannerComponent,
     SealListComponent,
-    ScanButtonComponent, CurtisIconComponent],
+    ScanButtonComponent, CurtisIconComponent, CurtisHeaderComponent],
   styles: [
     `
       :host { display: block; }
@@ -153,14 +154,7 @@ import type { Bank, Seal } from '../../core/models';
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Bank seals</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header title="Bank seals" backHref="/dashboard" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />

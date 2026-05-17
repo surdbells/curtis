@@ -16,6 +16,7 @@ import { ConfigService } from '../../core/services/config.service';
 import type { RouteStop } from '../../core/models';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
+import { CurtisHeaderComponent } from '../../shared/components/header';
 
 /**
  * Route map — Phase 9 redesign.
@@ -30,7 +31,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
   selector: 'curtis-map',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, OfflineBannerComponent, CurtisIconComponent],
+  imports: [CommonModule, IonicModule, OfflineBannerComponent, CurtisIconComponent, CurtisHeaderComponent],
   styles: [
     `
       :host { display: block; }
@@ -147,14 +148,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
     `,
   ],
   template: `
-    <ion-header [translucent]="true">
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/dashboard"></ion-back-button>
-        </ion-buttons>
-        <ion-title>Route map</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <curtis-header title="Route map" backHref="/dashboard" />
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />
       @if (!hasStops()) {
