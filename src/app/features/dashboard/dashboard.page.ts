@@ -602,15 +602,23 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (!this.connectivity.online()) return;
     this.loading.set(true);
     try {
-      const truck = await firstValueFrom(this.trucks.getMyTruck()).catch(() => null);
+      // Run truck and route fetches in parallel. They are independent
+      // backend resources — one is not a prerequisite for the other.
+      // Previously route was nested inside `if (truck)`, so any truck
+      // failure (network blip, 401, empty body) silently prevented the
+      // route call from firing.
+      const [truck, route] = await Promise.all([
+        firstValueFrom(this.trucks.getMyTruck()).catch(() => null),
+        firstValueFrom(this.routes.getMyRoute()).catch(() => null),
+      ]);
+
       if (truck) {
         this.truck.set(truck);
         await this.cache.set(CACHE_KEY_TRUCK, truck);
-        const route = await firstValueFrom(this.routes.getMyRoute()).catch(() => null);
-        if (route) {
-          this.routeStore.setRoute(route);
-          await this.cache.set(CACHE_KEY_ROUTE, route);
-        }
+      }
+      if (route) {
+        this.routeStore.setRoute(route);
+        await this.cache.set(CACHE_KEY_ROUTE, route);
       }
     } finally {
       this.loading.set(false);
