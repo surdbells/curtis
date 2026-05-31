@@ -562,15 +562,15 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   protected readonly tiles: Tile[] = [
     { label: 'Route map',     icon: 'map-outline',            route: '/map',                 requiresDay: false },
-    { label: "Today's stops", icon: 'list-outline',           route: '/daily',               requiresDay: true },
-    { label: 'Delivery',      icon: 'swap-horizontal-outline', route: '/delivery',           requiresDay: true },
-    { label: 'Process',       icon: 'cog-outline',            route: '/process',             requiresDay: true },
-    { label: 'Signature',     icon: 'create-outline',         route: '/signature',           requiresDay: true },
-    { label: 'Route seals',   icon: 'qr-code-outline',        route: '/route-scan',          requiresDay: true },
-    { label: 'Bank seals',    icon: 'barcode-outline',        route: '/bank-scan',           requiresDay: true },
-    { label: 'Manual evac',   icon: 'document-text-outline',  route: '/manual-evacuation',   requiresDay: true, tone: 'tertiary' },
-    { label: 'Retail evac',   icon: 'receipt-outline',        route: '/retail-evacuation',   requiresDay: true, tone: 'tertiary' },
-    { label: 'Incident',      icon: 'alert-circle-outline',   route: '/incident',            requiresDay: true, tone: 'danger' },
+    { label: "Today's stops", icon: 'list-outline',           route: '/daily',               requiresDay: false },
+    { label: 'Delivery',      icon: 'swap-horizontal-outline', route: '/delivery',           requiresDay: false },
+    { label: 'Process',       icon: 'cog-outline',            route: '/process',             requiresDay: false },
+    { label: 'Signature',     icon: 'create-outline',         route: '/signature',           requiresDay: false },
+    { label: 'Route seals',   icon: 'qr-code-outline',        route: '/route-scan',          requiresDay: false },
+    { label: 'Bank seals',    icon: 'barcode-outline',        route: '/bank-scan',           requiresDay: false },
+    { label: 'Manual evac',   icon: 'document-text-outline',  route: '/manual-evacuation',   requiresDay: false, tone: 'tertiary' },
+    { label: 'Retail evac',   icon: 'receipt-outline',        route: '/retail-evacuation',   requiresDay: false, tone: 'tertiary' },
+    { label: 'Incident',      icon: 'alert-circle-outline',   route: '/incident',            requiresDay: false, tone: 'danger' },
   ];
 
   async ngOnInit(): Promise<void> {
