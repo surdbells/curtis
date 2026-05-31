@@ -105,7 +105,7 @@ import { CurtisHeaderComponent } from '../../shared/components/header';
         </div>
       } @else {
         <div class="curtis-form-strip">
-          <div class="curtis-form-strip__icon">4</div>
+          <div class="curtis-form-strip__icon">5</div>
           <div class="curtis-form-strip__text">
             <div class="curtis-form-strip__title">Confirm and check out</div>
             <div class="curtis-form-strip__sub">Review the delivery summary, then complete the stop.</div>

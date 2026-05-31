@@ -33,8 +33,9 @@ export interface RetailEvacuationInput {
  *   POST /PostEvacuationReceipt     — retail-store cash pickup
  *
  * Field requirements derived from legacy CurtisTracker ManualActivity and
- * RetailActivity. Seals serialised as comma-separated IDs per the same
- * convention as SealService.
+ * RetailActivity. Seals serialised as comma-separated IDs (matches the
+ * convention also used by Process/DeliveryService for the per-stop seal
+ * list captured during the Delivery flow).
  */
 @Injectable({ providedIn: 'root' })
 export class EvacuationService {

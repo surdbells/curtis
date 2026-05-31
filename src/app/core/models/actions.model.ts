@@ -24,8 +24,6 @@ export const ACTION = {
   STATUS_BEAT: 'status',
   MANUAL_EVACUATION: 'manual_evacuation',
   EVACUATION_RECEIPT: 'evacuation_receipt',
-  INCOMING_SEALS_ROUTE: 'incoming_seals_route',
-  INCOMING_SEALS_BANK: 'incoming_seals_bank',
   INCIDENT: 'incident',
   GPS_PING: 'gps_ping',
 } as const;
