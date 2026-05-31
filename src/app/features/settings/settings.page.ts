@@ -201,13 +201,13 @@ import { CurtisHeaderComponent } from '../../shared/components/header';
           @if (truck.truck(); as t) {
             <div class="row">
               <span class="row__key">Truck</span>
-              <span class="row__value">{{ t.plate || t.id }}</span>
+              <span class="row__value">{{ t.plateNo || t.id }}</span>
             </div>
           }
           @if (route.route(); as r) {
             <div class="row">
               <span class="row__key">Route</span>
-              <span class="row__value">{{ r.name || r.id }}</span>
+              <span class="row__value">{{ r.clientName || r.routeId }}</span>
             </div>
           }
           <div class="actions">

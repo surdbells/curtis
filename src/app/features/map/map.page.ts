@@ -19,6 +19,15 @@ import { CurtisIconComponent } from '../../shared/components/icon';
 import { CurtisHeaderComponent } from '../../shared/components/header';
 
 /**
+ * A RouteStop that has been augmented with geographic coordinates,
+ * suitable for placing on the Leaflet map. Today the backend doesn't
+ * return coordinates as part of `/GetRoute/{id}` — when it does (or
+ * when a future branch-resolution layer attaches them), this type
+ * unlocks the map rendering path with no further changes.
+ */
+type GeoStop = RouteStop & { latitude: number; longitude: number };
+
+/**
  * Route map — Phase 9 redesign.
  *
  * Full-bleed Leaflet map with a floating route info panel docked at the
@@ -158,7 +167,7 @@ import { CurtisHeaderComponent } from '../../shared/components/header';
           </div>
           <div class="empty__title">No route loaded</div>
           <div class="empty__body">
-            Return to the dashboard and pull to refresh. Your route will appear here once it's assigned.
+            Stop coordinates aren't available for this route yet. Return to the dashboard for the stop list.
           </div>
         </div>
       } @else {
@@ -169,7 +178,7 @@ import { CurtisHeaderComponent } from '../../shared/components/header';
               <curtis-icon name="navigate-circle-outline" size="sm" />
             </div>
             <div class="info-panel__text">
-              <div class="info-panel__title">{{ r.name || 'Active route' }}</div>
+              <div class="info-panel__title">{{ r.clientName || 'Active route' }}</div>
               <div class="info-panel__meta">{{ routeStore.stops().length }} stops</div>
             </div>
           </div>
@@ -212,8 +221,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
       attribution: this.config.mapAttribution,
     }).addTo(this.map);
 
-    const stops = this.routeStore.stops().filter((s) => this.isGeoStop(s));
-    const latLngs = stops.map((s) => [s.latitude!, s.longitude!] as [number, number]);
+    const stops = this.routeStore.stops().filter((s): s is GeoStop => this.isGeoStop(s));
+    const latLngs = stops.map((s) => [s.latitude, s.longitude] as [number, number]);
 
     stops.forEach((stop, i) => {
       const icon = L.divIcon({
@@ -222,7 +231,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });
-      const marker = L.marker([stop.latitude!, stop.longitude!], { icon }).addTo(this.map!);
+      const marker = L.marker([stop.latitude, stop.longitude], { icon }).addTo(this.map!);
       marker.bindPopup(this.stopLabel(stop, i + 1));
     });
 
@@ -244,13 +253,26 @@ export class MapPage implements AfterViewInit, OnDestroy {
     }
   }
 
-  private isGeoStop(s: RouteStop): s is RouteStop & { latitude: number; longitude: number } {
-    return typeof s.latitude === 'number' && typeof s.longitude === 'number';
+  /**
+   * Runtime check for geo coordinates. The current backend `/GetRoute/{id}`
+   * response doesn't include latitude/longitude on stops — so today this
+   * predicate is always false and the page renders the empty state.
+   *
+   * Kept as a structural check rather than a hard `false` because the
+   * coordinates may arrive later (either added directly to the route
+   * response, or resolved via a future branch lookup that augments
+   * RouteStop with lat/lng before placing it in the store). When that
+   * happens this code begins rendering the map without further edits.
+   */
+  private isGeoStop(s: RouteStop): s is GeoStop {
+    const lat = (s as Partial<GeoStop>).latitude;
+    const lng = (s as Partial<GeoStop>).longitude;
+    return typeof lat === 'number' && typeof lng === 'number';
   }
 
-  private stopLabel(stop: RouteStop, n: number): string {
-    const name = stop.branchName ?? stop.address ?? stop.id;
-    return `<strong>Stop ${n}</strong><br/>${this.escapeHtml(String(name))}`;
+  private stopLabel(stop: GeoStop, n: number): string {
+    const name = stop.destination || stop.refNo || stop.referenceNumber;
+    return `<strong>Stop ${n}</strong><br/>${this.escapeHtml(name)}`;
   }
 
   private escapeHtml(s: string): string {

@@ -217,24 +217,24 @@ import type { RouteStop } from '../../core/models';
               <curtis-icon name="navigate-circle-outline" size="md" />
             </div>
             <div class="route-strip__text">
-              <div class="route-strip__title">{{ r.name || 'Active route' }}</div>
+              <div class="route-strip__title">{{ r.clientName || 'Active route' }}</div>
               <div class="route-strip__meta">{{ stops().length }} stops scheduled</div>
             </div>
           </div>
         }
 
         <div class="list">
-          @for (stop of stops(); track stop.id; let idx = $index) {
+          @for (stop of stops(); track stop.referenceNumber; let idx = $index) {
             <a
               class="stop"
               [class.disabled]="!canSelect(stop)"
               (click)="canSelect(stop) && selectStop(stop)"
             >
-              <div class="stop__seq">{{ idx + 1 }}</div>
+              <div class="stop__seq">{{ stop.stopNumber || idx + 1 }}</div>
               <div class="stop__body">
-                <div class="stop__title">{{ stop.branchName || stop.address || stop.id }}</div>
-                @if (stop.address && stop.branchName) {
-                  <div class="stop__sub">{{ stop.address }}</div>
+                <div class="stop__title">{{ stop.destination || stop.refNo }}</div>
+                @if (stop.refNo && stop.destination) {
+                  <div class="stop__sub">Ref: {{ stop.refNo }}</div>
                 }
               </div>
               @if (stop.status) {
@@ -256,15 +256,15 @@ export class DailyPage {
   protected readonly stops = computed<RouteStop[]>(() => this.routeStore.stops());
 
   protected canSelect(stop: RouteStop): boolean {
-    return !!stop.branchId || !!stop.id;
+    return !!stop.branchId || !!stop.referenceNumber;
   }
 
   protected async selectStop(stop: RouteStop): Promise<void> {
     await this.haptic();
     this.delivery.beginDelivery({
-      stopId: String(stop.id),
-      bankId: stop.bankId ? String(stop.bankId) : null,
-      branchId: stop.branchId ? String(stop.branchId) : null,
+      stopId: stop.referenceNumber,
+      bankId: stop.clientIdNumber || null,
+      branchId: stop.branchId || null,
       state: null,
     });
     await this.router.navigateByUrl('/delivery');

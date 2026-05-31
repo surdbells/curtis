@@ -386,7 +386,7 @@ const CACHE_KEY_ROUTE = 'phase3.route';
         </div>
 
         <h1 class="hero__title">
-          {{ routeStore.route()?.name || 'No route assigned' }}
+          {{ routeStore.route()?.clientName || 'No route assigned' }}
         </h1>
         <div class="hero__sub">
           {{ day.dayActive() ? 'Tracking is live' : 'Tap Start day to begin' }}
@@ -395,7 +395,7 @@ const CACHE_KEY_ROUTE = 'phase3.route';
         <div class="hero__details">
           <div class="hero__detail">
             <span class="hero__detail-label">Truck</span>
-            <span class="hero__detail-value">{{ truck.truck()?.plate || '—' }}</span>
+            <span class="hero__detail-value">{{ truck.truck()?.plateNo || '—' }}</span>
           </div>
           <div class="hero__detail">
             <span class="hero__detail-label">Stops</span>
@@ -667,7 +667,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
     const truck = this.truck.truck();
     const route = this.routeStore.route();
-    if (!truck?.id || !route?.id) {
+    if (!truck?.id || !route?.routeId) {
       await this.showToast('Incomplete assignment data. Pull to refresh.', 'warning');
       return;
     }
@@ -690,7 +690,7 @@ export class DashboardPage implements OnInit, OnDestroy {
               void this.showToast('Mileage and gas level are both required (gas 0–100).', 'warning');
               return false;
             }
-            void this.runStartDay({ mileage, gasLevel, truckId: String(truck.id), routeId: String(route.id) });
+            void this.runStartDay({ mileage, gasLevel, truckId: String(truck.id), routeId: String(route.routeId) });
             return true;
           },
         },
