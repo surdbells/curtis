@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { DeviceService } from './device.service';
 import { SessionStore } from '../stores/session.store';
-import { nowIsoUtc } from '../utils';
+import { formatLegacyDateTime, nowIsoUtc } from '../utils';
 import type { DevicePostDto } from '../models';
 
 /**
@@ -32,6 +32,12 @@ const WIRE_FIELD_NAMES: Record<string, string> = {
  * The returned object is keyed with the WIRE names (i.e. what the legacy
  * backend expects), not the TypeScript names. Callers serialise the
  * returned dict directly without further transformation.
+ *
+ * Wire boundary value conversions:
+ *   - `utcDateTime` (ISO 8601 internally) is converted to the legacy
+ *     `dd/MM/yyyy hh:mm tt` format the backend expects. Internal callers
+ *     keep using ISO; this builder is the only place that knows about
+ *     the wire format.
  */
 @Injectable({ providedIn: 'root' })
 export class ActionBuilderService {
@@ -43,7 +49,9 @@ export class ActionBuilderService {
    * any auto-filled field explicitly when needed.
    *
    * @returns a plain object suitable for HttpClient.post — field keys
-   *          have been translated to the legacy backend's wire format.
+   *          have been translated to the legacy backend's wire format,
+   *          and `utcDateTime` has been reformatted from ISO 8601 to
+   *          the legacy `dd/MM/yyyy hh:mm tt` format.
    */
   async build(overrides: Partial<DevicePostDto> = {}): Promise<Record<string, string | null | undefined>> {
     const ctx = await this.device.getContext(true).catch(() => null);
@@ -57,7 +65,21 @@ export class ActionBuilderService {
         ctx?.batteryLevel !== undefined ? String(ctx.batteryLevel) : null,
     };
 
-    const merged = { ...base, ...overrides };
+    const merged: Partial<DevicePostDto> = { ...base, ...overrides };
+
+    // Convert utcDateTime (ISO 8601) to the format the backend expects.
+    // Backend error if this isn't done:
+    //   "Unable to convert  to a date and time. accepted format is
+    //    dd/MM/yyyy hh:mm tt example 16/09/2017 06:55 PM"
+    // The conversion uses device-local time (no timezone in the target
+    // format). Lagos = UTC+1 with no DST; behaves as expected.
+    if (merged.utcDateTime) {
+      const parsed = new Date(merged.utcDateTime);
+      if (!Number.isNaN(parsed.getTime())) {
+        merged.utcDateTime = formatLegacyDateTime(parsed);
+      }
+    }
+
     return this.toWireFormat(merged);
   }
 
