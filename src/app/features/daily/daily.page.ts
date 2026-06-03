@@ -266,7 +266,6 @@ export class DailyPage {
       bankId: stop.clientIdNumber || null,
       branchId: stop.branchId || null,
       state: null,
-      expectedSeals: stop.seals ?? [],
     });
     await this.router.navigateByUrl('/delivery');
   }

@@ -36,7 +36,7 @@ import type { Bank, Branch } from '../../core/models';
  * On Check-In:
  *   - DeliveryService.checkIn posts /Check_In + status beat
  *   - DeliveryStore.markCheckedIn() flips canProceedToProcess
- *   - Navigate to /delivery-scan (per-stop seal verification step)
+ *   - Navigate to /process
  */
 @Component({
   selector: 'curtis-delivery',
@@ -285,7 +285,7 @@ export class DeliveryPage implements OnInit {
         branchId,
         note: this.note.trim() || undefined,
       });
-      await this.router.navigateByUrl('/delivery-scan');
+      await this.router.navigateByUrl('/process');
     } catch (err) {
       await this.showToast(this.describeError(err, 'Check-in failed.'), 'danger');
     } finally {

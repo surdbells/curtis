@@ -20,6 +20,7 @@ export * from './reference-cache.service';
 export * from './retailer.service';
 export * from './route.service';
 export * from './scanner.service';
+export * from './seal.service';
 export * from './signature.service';
 export * from './status.service';
 export * from './storage.service';

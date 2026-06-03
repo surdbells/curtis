@@ -62,7 +62,7 @@ import { SignaturePadComponent } from '../../shared/components/signature-pad/sig
         </div>
       } @else {
         <div class="curtis-form-strip">
-          <div class="curtis-form-strip__icon">4</div>
+          <div class="curtis-form-strip__icon">3</div>
           <div class="curtis-form-strip__text">
             <div class="curtis-form-strip__title">Capture teller signature</div>
             <div class="curtis-form-strip__sub">Ask the receiving teller to sign below to complete the delivery.</div>

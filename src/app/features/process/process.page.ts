@@ -55,48 +55,10 @@ import { CurtisHeaderComponent } from '../../shared/components/header';
         gap: var(--curtis-space-2);
         align-items: center;
       }
-      .seal-summary {
-        margin: 0 var(--curtis-space-4);
-        padding: var(--curtis-space-3) var(--curtis-space-4);
-        background: var(--curtis-surface-1);
-        border: 1px solid var(--curtis-border);
-        border-radius: var(--curtis-radius-md);
-        box-shadow: var(--curtis-shadow-xs);
-        display: flex;
-        align-items: center;
-        gap: var(--curtis-space-3);
-      }
-      .seal-summary__icon {
-        width: 36px;
-        height: 36px;
-        border-radius: var(--curtis-radius-md);
-        background: color-mix(in srgb, var(--ion-color-success) 14%, transparent);
-        color: var(--green-600);
-        display: grid;
-        place-items: center;
-        flex-shrink: 0;
-      }
-      .seal-summary__text { flex: 1; min-width: 0; }
-      .seal-summary__title {
-        font-size: var(--curtis-text-sm);
-        font-weight: var(--curtis-weight-semibold);
-        color: var(--curtis-text);
-      }
-      .seal-summary__ids {
-        font-family: var(--curtis-font-mono);
-        font-size: var(--curtis-text-xs);
-        color: var(--curtis-text-muted);
-        word-break: break-all;
-        margin-top: 2px;
-      }
-      .seal-summary--empty .seal-summary__icon {
-        background: color-mix(in srgb, var(--ion-color-warning) 14%, transparent);
-        color: var(--amber-500);
-      }
     `,
   ],
   template: `
-    <curtis-header title="Process" backHref="/delivery-scan" />
+    <curtis-header title="Process" backHref="/delivery" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />
@@ -108,36 +70,10 @@ import { CurtisHeaderComponent } from '../../shared/components/header';
         </div>
       } @else {
         <div class="curtis-form-strip">
-          <div class="curtis-form-strip__icon">3</div>
+          <div class="curtis-form-strip__icon">2</div>
           <div class="curtis-form-strip__text">
             <div class="curtis-form-strip__title">Record processing details</div>
-            <div class="curtis-form-strip__sub">Confirm scan summary and processing type, then continue to signature.</div>
-          </div>
-        </div>
-
-        <div class="section-label">Scanned seals</div>
-        <div
-          class="seal-summary"
-          [class.seal-summary--empty]="deliveryStore.scannedSeals().length === 0"
-        >
-          <div class="seal-summary__icon">
-            <curtis-icon
-              [name]="deliveryStore.scannedSeals().length > 0 ? 'checkmark-circle-outline' : 'warning-outline'"
-              size="sm"
-            />
-          </div>
-          <div class="seal-summary__text">
-            @if (deliveryStore.scannedSeals().length > 0) {
-              <div class="seal-summary__title">
-                {{ deliveryStore.scannedSeals().length }} seal(s) scanned
-              </div>
-              <div class="seal-summary__ids">{{ deliveryStore.scannedSeals().join(', ') }}</div>
-            } @else {
-              <div class="seal-summary__title">No seals scanned yet</div>
-              <div class="seal-summary__ids">
-                Return to the scan step to capture seals at this stop.
-              </div>
-            }
+            <div class="curtis-form-strip__sub">Capture seals and process type, then continue to signature.</div>
           </div>
         </div>
 
@@ -156,6 +92,15 @@ import { CurtisHeaderComponent } from '../../shared/components/header';
               label="Proc type"
               labelPlacement="stacked"
               [(ngModel)]="procType"
+              [disabled]="submitting()"
+            />
+          </ion-item>
+          <ion-item>
+            <ion-input
+              label="Seals"
+              labelPlacement="stacked"
+              placeholder="Comma-separated seal references"
+              [(ngModel)]="seals"
               [disabled]="submitting()"
             />
           </ion-item>
@@ -195,20 +140,17 @@ export class ProcessPage {
   protected readonly submitting = signal(false);
   protected processingType = '';
   protected procType = '';
+  protected seals = '';
   protected note = '';
 
   protected async submit(): Promise<void> {
     if (this.submitting()) return;
     this.submitting.set(true);
     try {
-      // Seals come from DeliveryStore (set by /delivery-scan), not the
-      // form. Serialised as comma-separated for the wire DTO (matches the
-      // legacy backend's seals field convention).
-      const sealsCsv = this.deliveryStore.scannedSeals().filter(Boolean).join(',');
       await this.deliverySvc.postProcess({
         processingType: this.processingType.trim() || undefined,
         procType: this.procType.trim() || undefined,
-        seals: sealsCsv || undefined,
+        seals: this.seals.trim() || undefined,
         note: this.note.trim() || undefined,
       });
       await this.router.navigateByUrl('/signature');

@@ -90,10 +90,16 @@ export const routes: Routes = [
       import('./features/retail-evacuation/retail-evacuation.page').then((m) => m.RetailEvacuationPage),
   },
   {
-    path: 'delivery-scan',
+    path: 'route-scan',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/delivery-scan/delivery-scan.page').then((m) => m.DeliveryScanPage),
+      import('./features/route-scan/route-scan.page').then((m) => m.RouteScanPage),
+  },
+  {
+    path: 'bank-scan',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/bank-scan/bank-scan.page').then((m) => m.BankScanPage),
   },
   {
     path: 'incident',
