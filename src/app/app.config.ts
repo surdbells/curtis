@@ -1,7 +1,7 @@
-import { ApplicationConfig, ErrorHandler, inject, provideZoneChangeDetection, provideAppInitializer } from '@angular/core';
+import { ApplicationConfig, ErrorHandler, importProvidersFrom, inject, provideZoneChangeDetection, provideAppInitializer } from '@angular/core';
 import { provideRouter, withPreloading, PreloadAllModules, Router } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone';
+import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 import { RouteReuseStrategy } from '@angular/router';
 import * as Sentry from '@sentry/angular';
 
@@ -28,9 +28,9 @@ import { appInitializerProvider } from './core/app-initializer';
 export const appConfig: ApplicationConfig = {
   providers: [
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
-    provideIonicAngular({
+    importProvidersFrom(IonicModule.forRoot({
       mode: 'md', // consistent Material look across iOS and Android
-    }),
+    })),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withPreloading(PreloadAllModules)),
     provideHttpClient(withInterceptors(httpInterceptors)),
