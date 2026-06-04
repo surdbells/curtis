@@ -1,23 +1,22 @@
 import { Injectable, inject } from '@angular/core';
 import { DeviceService } from './device.service';
 import { SessionStore } from '../stores/session.store';
-import { formatLegacyDateTime, nowIsoUtc } from '../utils';
+import { nowIsoUtc } from '../utils';
 import type { DevicePostDto } from '../models';
 
 /**
  * Maps the human-friendly DevicePostDto field names to the field names the
- * legacy CurtisTracker backend actually accepts.
+ * backend actually accepts.
  *
- * The OpenAPI 3.1 schema used snake_case (`utcDateTime`, `batterystatus`)
- * but the legacy Android client posts with `DateTime`, `batterylevel`, etc.
- * — and that's what the production server's accept-list still expects.
- * Source: legacy/CurtisTracker BankActivity.java, ProcessActivity.java,
- * ManualActivity.java field constants.
+ * Historical context: the original legacy server used `.NET`-style names
+ * (`DateTime`, `batterylevel`). The modern backend spec uses `utcDateTime`
+ * directly, so we no longer rename it. `batterystatus -> batterylevel` is
+ * still translated for now (existing wire shape; not in the canonical spec
+ * but accepted as harmless extra data).
  *
  * Keys that don't appear here pass through unchanged.
  */
 const WIRE_FIELD_NAMES: Record<string, string> = {
-  utcDateTime: 'DateTime',
   batterystatus: 'batterylevel',
 };
 
@@ -33,11 +32,11 @@ const WIRE_FIELD_NAMES: Record<string, string> = {
  * backend expects), not the TypeScript names. Callers serialise the
  * returned dict directly without further transformation.
  *
- * Wire boundary value conversions:
- *   - `utcDateTime` (ISO 8601 internally) is converted to the legacy
- *     `dd/MM/yyyy hh:mm tt` format the backend expects. Internal callers
- *     keep using ISO; this builder is the only place that knows about
- *     the wire format.
+ * Date handling:
+ *   `utcDateTime` is sent as ISO 8601 UTC (e.g. `2026-06-04T17:30:45.123Z`)
+ *   per the canonical backend spec. The older `dd/MM/yyyy hh:mm tt` wire
+ *   format used by the original legacy server is no longer applied — the
+ *   modern backend handles ISO 8601 directly.
  */
 @Injectable({ providedIn: 'root' })
 export class ActionBuilderService {
@@ -49,9 +48,8 @@ export class ActionBuilderService {
    * any auto-filled field explicitly when needed.
    *
    * @returns a plain object suitable for HttpClient.post — field keys
-   *          have been translated to the legacy backend's wire format,
-   *          and `utcDateTime` has been reformatted from ISO 8601 to
-   *          the legacy `dd/MM/yyyy hh:mm tt` format.
+   *          have been translated to the legacy backend's wire format.
+   *          `utcDateTime` is in ISO 8601 UTC.
    */
   async build(overrides: Partial<DevicePostDto> = {}): Promise<Record<string, string | null | undefined>> {
     const ctx = await this.device.getContext(true).catch(() => null);
@@ -66,19 +64,6 @@ export class ActionBuilderService {
     };
 
     const merged: Partial<DevicePostDto> = { ...base, ...overrides };
-
-    // Convert utcDateTime (ISO 8601) to the format the backend expects.
-    // Backend error if this isn't done:
-    //   "Unable to convert  to a date and time. accepted format is
-    //    dd/MM/yyyy hh:mm tt example 16/09/2017 06:55 PM"
-    // The conversion uses device-local time (no timezone in the target
-    // format). Lagos = UTC+1 with no DST; behaves as expected.
-    if (merged.utcDateTime) {
-      const parsed = new Date(merged.utcDateTime);
-      if (!Number.isNaN(parsed.getTime())) {
-        merged.utcDateTime = formatLegacyDateTime(parsed);
-      }
-    }
 
     return this.toWireFormat(merged);
   }
