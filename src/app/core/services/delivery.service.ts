@@ -39,15 +39,34 @@ export interface CheckOutInput {
  * stop they're already checked in for:
  *   { status: "-1", message: "Your previous action was a check_in", data: null }
  *
- * That's a soft-success condition for us — we should not block the user;
- * just advance to Step 2 (Scan). This guard matches the message safely
- * (case-insensitive, tolerates trailing punctuation or wording drift).
+ * The HTTP status code on this response is 400, so Angular's HttpClient
+ * throws an HttpErrorResponse before ApiService.unwrap() runs — the
+ * envelope ends up at `err.error`, not at the top-level `.message`.
+ *
+ * On unrelated unwrap-path errors (200 OK with status != "0") the envelope
+ * IS thrown directly and the message sits at the top level. This guard
+ * checks both shapes so the soft-success path triggers regardless of
+ * which delivery vector the backend used.
+ *
+ * The regex is tolerant of wording drift: case, punctuation, separators
+ * between "check" and "in" (underscore / dash / space / nothing).
  */
+const CHECK_IN_REPEAT_RE = /previous\s+action\s+was\s+a?\s*check[_\s-]?in/i;
+
 function isAlreadyCheckedInError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;
-  const e = err as { message?: unknown };
-  return typeof e.message === 'string' &&
-    /previous\s+action\s+was\s+a?\s*check[_\s-]?in/i.test(e.message);
+  const e = err as { message?: unknown; error?: unknown };
+
+  // Case 1: HttpErrorResponse (400 path) — envelope is at err.error.
+  if (e.error && typeof e.error === 'object') {
+    const inner = (e.error as { message?: unknown }).message;
+    if (typeof inner === 'string' && CHECK_IN_REPEAT_RE.test(inner)) return true;
+  }
+
+  // Case 2: thrown envelope from ApiService.unwrap (200 OK + status != "0").
+  if (typeof e.message === 'string' && CHECK_IN_REPEAT_RE.test(e.message)) return true;
+
+  return false;
 }
 
 /**
