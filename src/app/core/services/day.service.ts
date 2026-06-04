@@ -54,12 +54,12 @@ export class DayService {
     const truckId = input.truckId ?? null;
     const routeId = input.routeId ?? null;
     // Wire payload (backend spec):
-    //   truckid, mileage, gaslevel, userid, utcDateTime, status ('StartDay'),
+    //   truckid, mileage, gaslevel, userid, utcDateTime, status ('Start Day'),
     //   deviceId, longitude, latitude
     // Builder auto-fills deviceId/utcDateTime/userid/batterystatus.
     // NOTE: action and routeid are intentionally omitted per the spec.
     const dto = await this.builder.build({
-      status: 'StartDay',
+      status: 'Start Day',
       utcDateTime: timestamp,
       truckid: truckId,
       mileage: input.mileage,
@@ -87,11 +87,11 @@ export class DayService {
     const activeTruck = this.dayStore.truckId();
 
     // Wire payload (backend spec):
-    //   truckid, mileage, gaslevel, userid, utcDateTime, status ('EndDay'),
+    //   truckid, mileage, gaslevel, userid, utcDateTime, status ('End Day'),
     //   deviceId, longitude, latitude
     // NOTE: action and routeid are intentionally omitted per the spec.
     const dto = await this.builder.build({
-      status: 'EndDay',
+      status: 'End Day',
       truckid: activeTruck,
       mileage: input.mileage,
       gaslevel: input.gasLevel,

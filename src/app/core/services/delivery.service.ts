@@ -35,6 +35,22 @@ export interface CheckOutInput {
 }
 
 /**
+ * Backend returns this envelope when the agent tries to check in for a
+ * stop they're already checked in for:
+ *   { status: "-1", message: "Your previous action was a check_in", data: null }
+ *
+ * That's a soft-success condition for us — we should not block the user;
+ * just advance to Step 2 (Scan). This guard matches the message safely
+ * (case-insensitive, tolerates trailing punctuation or wording drift).
+ */
+function isAlreadyCheckedInError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { message?: unknown };
+  return typeof e.message === 'string' &&
+    /previous\s+action\s+was\s+a?\s*check[_\s-]?in/i.test(e.message);
+}
+
+/**
  * Delivery flow service.
  *
  * Each call wraps the action-specific POST and updates DeliveryStore so the
@@ -73,7 +89,15 @@ export class DeliveryService {
       longitude: coords ? String(coords.longitude) : null,
     });
 
-    await firstValueFrom(this.api.post<unknown>('/Check_In', dto));
+    await firstValueFrom(this.api.post<unknown>('/Check_In', dto)).catch((err) => {
+      // Idempotency: if the backend reports the previous action was
+      // already a check_in (e.g. the user re-entered the stop or the
+      // earlier success response was lost on a flaky connection),
+      // treat that as success and advance to Step 2. The local state
+      // gets a fresh check-in timestamp either way.
+      if (isAlreadyCheckedInError(err)) return;
+      throw err;
+    });
     this.delivery.markCheckedIn(timestamp);
   }
 
