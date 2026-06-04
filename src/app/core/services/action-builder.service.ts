@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { DeviceService } from './device.service';
 import { SessionStore } from '../stores/session.store';
-import { nowIsoUtc } from '../utils';
+import { formatLegacyDateTimeUtc, nowIsoUtc } from '../utils';
 import type { DevicePostDto } from '../models';
 
 /**
@@ -65,8 +65,10 @@ const CANONICAL_FIELDS: readonly (keyof DevicePostDto)[] = [
  *
  * Date handling
  * =============
- *   `utcDateTime` is sent as ISO 8601 UTC (e.g. `2026-06-04T17:30:45.123Z`)
- *   per the canonical backend spec.
+ *   `utcDateTime` is sent in the legacy wire pattern
+ *   `dd/MM/yyyy hh:mm tt` built from UTC components (e.g.
+ *   `04/06/2026 05:30 PM`). Callers that pass ISO 8601 strings have
+ *   them auto-converted at the wire boundary.
  */
 @Injectable({ providedIn: 'root' })
 export class ActionBuilderService {
@@ -81,7 +83,7 @@ export class ActionBuilderService {
    *          field is present, with `""` for fields the caller did not
    *          set. Caller `null` overrides are normalised to `""`.
    *          Caller `undefined` overrides leave the prior value in place.
-   *          `utcDateTime` is in ISO 8601 UTC.
+   *          `utcDateTime` is converted to `dd/MM/yyyy hh:mm tt` (UTC).
    */
   async build(overrides: Partial<DevicePostDto> = {}): Promise<Record<string, string>> {
     const ctx = await this.device.getContext(true).catch(() => null);
@@ -113,6 +115,18 @@ export class ActionBuilderService {
       if (v === undefined) continue;
       out[k] = v === null ? '' : String(v);
     }
+
+    // Wire-format conversion: utcDateTime is shipped as the legacy
+    // `dd/MM/yyyy hh:mm tt` pattern (UTC components). nowIsoUtc() and any
+    // ISO 8601 string a caller passes both parse cleanly via `new Date(...)`.
+    // If the value is empty or unparseable, leave it as-is.
+    if (out['utcDateTime']) {
+      const parsed = new Date(out['utcDateTime']);
+      if (!Number.isNaN(parsed.getTime())) {
+        out['utcDateTime'] = formatLegacyDateTimeUtc(parsed);
+      }
+    }
+
     return out;
   }
 }
