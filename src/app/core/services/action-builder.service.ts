@@ -58,9 +58,10 @@ const CANONICAL_FIELDS: readonly (keyof DevicePostDto)[] = [
  * Canonical-shape guarantee
  * =========================
  * The returned object ALWAYS contains every CANONICAL_FIELDS key. Fields
- * not supplied by the caller (and not auto-filled here) are set to `null`.
- * This is required by the backend: every endpoint expects to receive the
- * full DTO shape on the wire, and reads only the fields it needs.
+ * not supplied by the caller (and not auto-filled here) are set to the
+ * empty string `""`. This is required by the backend: every endpoint
+ * expects to receive the full DTO shape on the wire with `""` for unset
+ * fields (no `null`s).
  *
  * Date handling
  * =============
@@ -77,33 +78,40 @@ export class ActionBuilderService {
    * any auto-filled field explicitly when needed.
    *
    * @returns a plain object suitable for HttpClient.post — every canonical
-   *          field is present, with `null` for fields the caller did not
-   *          set. `utcDateTime` is in ISO 8601 UTC.
+   *          field is present, with `""` for fields the caller did not
+   *          set. Caller `null` overrides are normalised to `""`.
+   *          Caller `undefined` overrides leave the prior value in place.
+   *          `utcDateTime` is in ISO 8601 UTC.
    */
-  async build(overrides: Partial<DevicePostDto> = {}): Promise<Record<string, string | null>> {
+  async build(overrides: Partial<DevicePostDto> = {}): Promise<Record<string, string>> {
     const ctx = await this.device.getContext(true).catch(() => null);
     const userId = this.session.userId();
 
-    const autoFilled: Partial<DevicePostDto> = {
-      deviceId: ctx?.deviceId ?? null,
+    const autoFilled: Record<string, string> = {
+      deviceId: ctx?.deviceId ?? '',
       utcDateTime: nowIsoUtc(),
-      userid: userId,
+      userid: userId ?? '',
       batterystatus:
-        ctx?.batteryLevel !== undefined ? String(ctx.batteryLevel) : null,
+        ctx?.batteryLevel !== undefined ? String(ctx.batteryLevel) : '',
     };
 
-    // Start with every canonical field set to null, then layer auto-fills,
+    // Start with every canonical field set to "", then layer auto-fills,
     // then caller overrides on top. This guarantees every wire payload
-    // contains exactly the canonical key set in a stable order.
-    const out: Record<string, string | null> = {};
+    // contains exactly the canonical key set in a stable order, with no
+    // `null` values anywhere — only strings (possibly empty).
+    const out: Record<string, string> = {};
     for (const key of CANONICAL_FIELDS) {
-      out[key] = null;
+      out[key] = '';
     }
-    for (const [k, v] of Object.entries({ ...autoFilled, ...overrides })) {
-      // `undefined` overrides leave the default null in place; `null` or
-      // strings (including empty strings) replace it explicitly.
+    for (const [k, v] of Object.entries(autoFilled)) {
+      out[k] = v;
+    }
+    for (const [k, v] of Object.entries(overrides)) {
+      // `undefined` overrides leave the default / auto-filled value in
+      // place. `null` overrides normalise to "". Strings (including empty
+      // strings) pass through unchanged.
       if (v === undefined) continue;
-      out[k] = v as string | null;
+      out[k] = v === null ? '' : String(v);
     }
     return out;
   }
