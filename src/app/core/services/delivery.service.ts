@@ -5,8 +5,7 @@ import { ActionBuilderService } from './action-builder.service';
 import { LocationService } from './location.service';
 import { SignatureService } from './signature.service';
 import { DeliveryStore } from '../stores/delivery.store';
-import { DayStore } from '../stores/day.store';
-import { ACTION, STATUS } from '../models';
+import { ACTION } from '../models';
 import { nowIsoUtc } from '../utils';
 
 export interface CheckInInput {
@@ -50,7 +49,6 @@ export class DeliveryService {
   private readonly location = inject(LocationService);
   private readonly signatureHelper = inject(SignatureService);
   private readonly delivery = inject(DeliveryStore);
-  private readonly day = inject(DayStore);
 
   async checkIn(input: CheckInInput): Promise<void> {
     const refnumber = this.delivery.stopId();
@@ -106,18 +104,27 @@ export class DeliveryService {
     this.delivery.markProcessComplete();
   }
 
+  /**
+   * Step 4 (Sign). Post the captured signature.
+   *
+   * Wire payload (backend spec):
+   *   refnumber, signature, userid, utcDateTime, latitude, longitude, deviceId
+   * Builder adds batterystatus too; harmless extra.
+   *
+   * NOTE: action, status, bankid, branchid, routeid, truckid are omitted.
+   */
   async postSignature(signatureDataUrlOrBase64: string): Promise<void> {
+    const refnumber = this.delivery.stopId();
+    if (!refnumber) {
+      throw new Error('No active stop selected.');
+    }
     const raw = this.signatureHelper.toRawBase64(signatureDataUrlOrBase64);
     const coords = await this.location.tryGetCurrent();
 
     const dto = await this.builder.build({
-      action: ACTION.SIGNATURE,
-      status: STATUS.OK,
+      refnumber,
       signature: raw,
-      bankid: this.delivery.bankId(),
-      branchid: this.delivery.branchId(),
-      routeid: this.day.routeId(),
-      truckid: this.day.truckId(),
+      utcDateTime: nowIsoUtc(),
       latitude: coords ? String(coords.latitude) : null,
       longitude: coords ? String(coords.longitude) : null,
     });
