@@ -25,6 +25,7 @@ import { CurtisIconComponent } from '../../shared/components/icon';
 import { CurtisHeaderComponent, CurtisHeaderStatusComponent } from '../../shared/components/header';
 import { SealListComponent } from '../../shared/components/seal-list/seal-list.component';
 import { ScanButtonComponent } from '../../shared/components/scan-button/scan-button.component';
+import { SignaturePadComponent } from '../../shared/components/signature-pad/signature-pad.component';
 import { NIGERIAN_STATES } from '../../core/models/nigerian-states';
 import type { Seal, RouteStop, Bank, Branch } from '../../core/models';
 
@@ -62,6 +63,7 @@ import type { Seal, RouteStop, Bank, Branch } from '../../core/models';
     CurtisHeaderStatusComponent,
     SealListComponent,
     ScanButtonComponent,
+    SignaturePadComponent,
   ],
   styles: [
     `
@@ -347,6 +349,40 @@ import type { Seal, RouteStop, Bank, Branch } from '../../core/models';
       }
       .checkin-submit {
         margin-top: var(--curtis-space-1);
+      }
+
+      /* --- Step 3 (Sign) + Step 4 (Check out) cards share the chrome --- */
+      .sign-card,
+      .checkout-card {
+        margin: var(--curtis-space-3) var(--curtis-space-4) var(--curtis-space-4);
+        padding: var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-3);
+      }
+      .sign-card__heading,
+      .checkout-card__heading {
+        font-size: var(--curtis-text-base);
+        font-weight: var(--curtis-weight-semibold);
+        color: var(--curtis-text);
+      }
+      .sign-card__sub,
+      .checkout-card__sub {
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text-subtle);
+        margin-top: -10px;
+      }
+      .sign-card__captured {
+        display: flex;
+        gap: var(--curtis-space-2);
+        align-items: center;
+        font-size: var(--curtis-text-sm);
+        font-weight: var(--curtis-weight-semibold);
+        color: var(--green-600);
       }
 
       /* Soft day-not-started warning (E3, per Q6). */
@@ -643,16 +679,87 @@ import type { Seal, RouteStop, Bank, Branch } from '../../core/models';
           </ion-list>
 
           <div class="curtis-submit-zone">
-            <ion-button expand="block" [disabled]="submitting()" (click)="submit()">
+            <ion-button expand="block" [disabled]="submitting() || deliveryStore.processComplete()" (click)="submit()">
               @if (submitting()) {
                 <ion-spinner slot="start" name="crescent" />
                 Recording…
+              } @else if (deliveryStore.processComplete()) {
+                <curtis-icon slot="start" name="checkmark-outline" size="sm" />
+                Processing saved
               } @else {
                 Save & continue
                 <curtis-icon slot="end" name="arrow-forward-outline" size="sm" />
               }
             </ion-button>
           </div>
+        }
+
+        <!-- STEP 3 — Sign -->
+        @if (deliveryStore.processComplete() && !deliveryStore.hasSignature()) {
+          <section class="sign-card">
+            <div class="sign-card__heading">Capture signature</div>
+            <div class="sign-card__sub">
+              Hand the device to the recipient. They sign below to confirm delivery.
+            </div>
+
+            <curtis-signature-pad (end)="onSignatureCaptured($event)" />
+
+            <ion-button
+              expand="block"
+              [disabled]="!lastSignatureDataUrl() || signatureSubmitting()"
+              (click)="saveSignature()"
+            >
+              @if (signatureSubmitting()) {
+                <ion-spinner slot="start" name="crescent" />
+                Saving signature…
+              } @else {
+                <curtis-icon slot="start" name="create-outline" size="sm" />
+                Save signature
+              }
+            </ion-button>
+          </section>
+        }
+
+        <!-- STEP 4 — Check out -->
+        @if (deliveryStore.canCheckOut() && !deliveryStore.checkOutAt()) {
+          <section class="checkout-card">
+            <div class="checkout-card__heading">Check out</div>
+            <div class="checkout-card__sub">
+              Signature recorded. Confirm check-out to close this stop.
+            </div>
+
+            <div class="sign-card__captured">
+              <curtis-icon name="checkmark-circle-outline" size="sm" />
+              Signature on file
+            </div>
+
+            <div class="checkin-field">
+              <label class="checkin-field__label" for="co-note">Closing note (optional)</label>
+              <ion-textarea
+                id="co-note"
+                [(ngModel)]="checkOutNote"
+                [disabled]="checkOutSubmitting()"
+                placeholder="Anything to flag at this stop"
+                [autoGrow]="true"
+                rows="2"
+              />
+            </div>
+
+            <ion-button
+              expand="block"
+              color="success"
+              [disabled]="checkOutSubmitting()"
+              (click)="doCheckOut()"
+            >
+              @if (checkOutSubmitting()) {
+                <ion-spinner slot="start" name="crescent" />
+                Checking out…
+              } @else {
+                <curtis-icon slot="start" name="log-out-outline" size="sm" />
+                Confirm check-out
+              }
+            </ion-button>
+          </section>
         }
       }
     </ion-content>
@@ -683,6 +790,14 @@ export class ProcessPage implements OnInit, OnDestroy {
   protected selectedState: string | null = null;
   protected selectedBranchId: string | null = null;
   protected checkInNote = '';
+  // ---------------------------------------------------------------------------
+
+  // --- Step 3 (Sign) + Step 4 (Check-out) state ------------------------------
+  /** Most recent data-URL emitted by <curtis-signature-pad>. Cleared after save. */
+  protected readonly lastSignatureDataUrl = signal<string | null>(null);
+  protected readonly signatureSubmitting = signal(false);
+  protected readonly checkOutSubmitting = signal(false);
+  protected checkOutNote = '';
   // ---------------------------------------------------------------------------
 
   /** Scanned seal IDs, local to this page. De-duplicated on insert. */
@@ -959,13 +1074,70 @@ export class ProcessPage implements OnInit, OnDestroy {
         note: this.note.trim() || undefined,
       });
       this.deliveryStore.markProcessComplete();
-      await this.router.navigateByUrl('/signature');
+      // Flow continues inline — the stepper advances to Step 3 (Sign) and
+      // the signature card unfolds below. No navigation.
+      await this.haptic('success');
     } catch (err) {
       await this.showToast(this.describeError(err, 'Could not save process details.'), 'danger');
     } finally {
       this.submitting.set(false);
     }
   }
+
+  // --- Step 3 (Sign) methods -------------------------------------------------
+
+  /** Called every time the recipient lifts their finger on the signature pad. */
+  protected onSignatureCaptured(dataUrl: string): void {
+    this.lastSignatureDataUrl.set(dataUrl || null);
+  }
+
+  protected async saveSignature(): Promise<void> {
+    const dataUrl = this.lastSignatureDataUrl();
+    if (!dataUrl || this.signatureSubmitting()) return;
+    this.signatureSubmitting.set(true);
+    try {
+      await this.deliverySvc.postSignature(dataUrl);
+      this.deliveryStore.setSignature(dataUrl);
+      await this.haptic('success');
+      await this.showToast('Signature saved.', 'success');
+    } catch (err) {
+      await this.haptic('error');
+      await this.showToast(this.describeError(err, 'Could not save signature.'), 'danger');
+    } finally {
+      this.signatureSubmitting.set(false);
+    }
+  }
+
+  // --- Step 4 (Check-out) methods --------------------------------------------
+
+  protected async doCheckOut(): Promise<void> {
+    if (this.checkOutSubmitting()) return;
+    if (!this.deliveryStore.canCheckOut()) return;
+    this.checkOutSubmitting.set(true);
+    try {
+      await this.deliverySvc.checkOut({
+        note: this.checkOutNote.trim() || undefined,
+      });
+      await this.haptic('success');
+      await this.showToast('Checked out. Stop complete.', 'success');
+      // Reset local state so re-entering /process for the next stop starts fresh.
+      this.deliveryStore.clear();
+      this.localScanned.set([]);
+      this.lastSignatureDataUrl.set(null);
+      this.checkOutNote = '';
+      this.note = '';
+      this.processingType = '';
+      this.procType = '';
+      // Per Q4: navigate to Dashboard after check-out.
+      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+    } catch (err) {
+      await this.haptic('error');
+      await this.showToast(this.describeError(err, 'Could not check out.'), 'danger');
+    } finally {
+      this.checkOutSubmitting.set(false);
+    }
+  }
+  // ---------------------------------------------------------------------------
 
   private async haptic(kind: 'success' | 'tap' | 'error'): Promise<void> {
     if (!Capacitor.isNativePlatform()) return;
