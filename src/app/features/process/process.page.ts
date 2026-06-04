@@ -27,7 +27,7 @@ import { SealListComponent } from '../../shared/components/seal-list/seal-list.c
 import { ScanButtonComponent } from '../../shared/components/scan-button/scan-button.component';
 import { SignaturePadComponent } from '../../shared/components/signature-pad/signature-pad.component';
 import { NIGERIAN_STATES } from '../../core/models/nigerian-states';
-import type { Seal, RouteStop, Bank, Branch } from '../../core/models';
+import type { Seal, RouteStop, Branch } from '../../core/models';
 
 /**
  * Process — the stop hub. All interaction with a single stop happens here:
@@ -470,21 +470,6 @@ import type { Seal, RouteStop, Bank, Branch } from '../../core/models';
           </div>
 
           <div class="checkin-field">
-            <label class="checkin-field__label" for="ci-bank">Bank</label>
-            <ion-select
-              id="ci-bank"
-              interface="action-sheet"
-              placeholder="Select bank"
-              [(ngModel)]="selectedBankId"
-              [disabled]="loadingBanks() || checkInSubmitting()"
-            >
-              @for (b of banks(); track b.id) {
-                <ion-select-option [value]="b.id">{{ b.name }}</ion-select-option>
-              }
-            </ion-select>
-          </div>
-
-          <div class="checkin-field">
             <label class="checkin-field__label" for="ci-state">State</label>
             <ion-select
               id="ci-state"
@@ -780,13 +765,10 @@ export class ProcessPage implements OnInit, OnDestroy {
 
   // --- Step 1 (Check-in) state -----------------------------------------------
   protected readonly states = NIGERIAN_STATES;
-  protected readonly banks = signal<Bank[]>([]);
   protected readonly branches = signal<Branch[]>([]);
-  protected readonly loadingBanks = signal(false);
   protected readonly loadingBranches = signal(false);
   protected readonly checkInSubmitting = signal(false);
 
-  protected selectedBankId: string | null = null;
   protected selectedState: string | null = null;
   protected selectedBranchId: string | null = null;
   protected checkInNote = '';
@@ -882,24 +864,20 @@ export class ProcessPage implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     // Pre-fill the check-in panel from DeliveryStore (populated when the
-    // agent tapped a stop on the Delivery list or arrived via deep link).
-    this.selectedBankId = this.deliveryStore.bankId();
+    // agent tapped a stop on the Delivery list).
     this.selectedBranchId = this.deliveryStore.branchId();
     this.selectedState = this.deliveryStore.state();
 
-    // If not yet checked in, hydrate the bank/branch pickers.
-    if (!this.deliveryStore.isCheckedIn()) {
-      await this.loadBanks();
-      if (this.selectedState) {
-        await this.loadBranches(this.selectedState);
-      }
+    // If not yet checked in, hydrate the branch picker for the current state.
+    if (!this.deliveryStore.isCheckedIn() && this.selectedState) {
+      await this.loadBranches(this.selectedState);
     }
   }
 
   // --- Step 1 (Check-in) methods --------------------------------------------
 
   protected canCheckIn(): boolean {
-    return !!this.selectedBankId && !!this.selectedBranchId;
+    return !!this.selectedBranchId;
   }
 
   protected async onStateChange(): Promise<void> {
@@ -908,16 +886,6 @@ export class ProcessPage implements OnInit, OnDestroy {
       await this.loadBranches(this.selectedState);
     } else {
       this.branches.set([]);
-    }
-  }
-
-  private async loadBanks(): Promise<void> {
-    this.loadingBanks.set(true);
-    try {
-      const list = await this.banksSvc.getBanksWithCache();
-      this.banks.set(list);
-    } finally {
-      this.loadingBanks.set(false);
     }
   }
 
@@ -934,11 +902,12 @@ export class ProcessPage implements OnInit, OnDestroy {
   protected async doCheckIn(): Promise<void> {
     if (!this.canCheckIn() || this.checkInSubmitting()) return;
 
-    const bankId = String(this.selectedBankId);
     const branchId = String(this.selectedBranchId);
 
+    // Persist branch + state to DeliveryStore so the check-out (Step 5) can
+    // read branchid back without re-prompting. Bank is no longer asked.
     this.deliveryStore.setBankBranch({
-      bankId,
+      bankId: '',
       branchId,
       state: this.selectedState,
     });
@@ -946,7 +915,6 @@ export class ProcessPage implements OnInit, OnDestroy {
     this.checkInSubmitting.set(true);
     try {
       await this.deliverySvc.checkIn({
-        bankId,
         branchId,
         note: this.checkInNote.trim() || undefined,
       });
