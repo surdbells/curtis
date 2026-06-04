@@ -6,7 +6,6 @@ import { LocationService } from './location.service';
 import { TrackerService } from './tracker.service';
 import { DayStore } from '../stores/day.store';
 import { nowIsoUtc } from '../utils';
-import { ACTION, STATUS } from '../models';
 
 export interface StartDayInput {
   /** Optional. Backend accepts null if no truck is assigned at start. */
@@ -54,12 +53,15 @@ export class DayService {
     const timestamp = nowIsoUtc();
     const truckId = input.truckId ?? null;
     const routeId = input.routeId ?? null;
+    // Wire payload (backend spec):
+    //   truckid, mileage, gaslevel, userid, utcDateTime, status ('StartDay'),
+    //   deviceId, longitude, latitude
+    // Builder auto-fills deviceId/utcDateTime/userid/batterystatus.
+    // NOTE: action and routeid are intentionally omitted per the spec.
     const dto = await this.builder.build({
-      action: ACTION.START_DAY,
-      status: STATUS.OK,
+      status: 'StartDay',
       utcDateTime: timestamp,
       truckid: truckId,
-      routeid: routeId,
       mileage: input.mileage,
       gaslevel: input.gasLevel,
       latitude: coords ? String(coords.latitude) : null,
@@ -83,13 +85,14 @@ export class DayService {
   async end(input: EndDayInput): Promise<void> {
     const coords = await this.location.tryGetCurrent();
     const activeTruck = this.dayStore.truckId();
-    const activeRoute = this.dayStore.routeId();
 
+    // Wire payload (backend spec):
+    //   truckid, mileage, gaslevel, userid, utcDateTime, status ('EndDay'),
+    //   deviceId, longitude, latitude
+    // NOTE: action and routeid are intentionally omitted per the spec.
     const dto = await this.builder.build({
-      action: ACTION.END_DAY,
-      status: STATUS.OK,
+      status: 'EndDay',
       truckid: activeTruck,
-      routeid: activeRoute,
       mileage: input.mileage,
       gaslevel: input.gasLevel,
       latitude: coords ? String(coords.latitude) : null,
