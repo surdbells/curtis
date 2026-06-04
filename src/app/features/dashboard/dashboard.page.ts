@@ -84,7 +84,13 @@ const CACHE_KEY_ROUTE = 'phase3.route';
   styles: [
     `
       :host { display: block; }
-      ion-content { --background: var(--curtis-bg); }
+      ion-content {
+        --background: var(--curtis-bg);
+        /* Reserve scroll headroom so the last tile row can scroll fully above
+         * the SOS FAB (24px from bottom + 56px tall = 80px occupied) plus
+         * breathing room and the system safe-area inset. */
+        --padding-bottom: calc(var(--curtis-space-24) + env(safe-area-inset-bottom, 0));
+      }
 
       /* --- Hero card (day status) --- */
       .hero {
