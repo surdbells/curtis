@@ -5,20 +5,47 @@ import { nowIsoUtc } from '../utils';
 import type { DevicePostDto } from '../models';
 
 /**
- * Maps the human-friendly DevicePostDto field names to the field names the
- * backend actually accepts.
+ * The full set of canonical DevicePostDto field names the backend expects
+ * on every POST. Every key appears in every wire payload — fields not
+ * supplied by the caller get explicit `null` so the backend always sees
+ * the same shape.
  *
- * Historical context: the original legacy server used `.NET`-style names
- * (`DateTime`, `batterylevel`). The modern backend spec uses `utcDateTime`
- * directly, so we no longer rename it. `batterystatus -> batterylevel` is
- * still translated for now (existing wire shape; not in the canonical spec
- * but accepted as harmless extra data).
- *
- * Keys that don't appear here pass through unchanged.
+ * Order matches `D_DevicePostDto` in the API model file for easy diffing.
  */
-const WIRE_FIELD_NAMES: Record<string, string> = {
-  batterystatus: 'batterylevel',
-};
+const CANONICAL_FIELDS: readonly (keyof DevicePostDto)[] = [
+  'deviceId',
+  'utcDateTime',
+  'note',
+  'action',
+  'status',
+  'bankid',
+  'branchid',
+  'batchid',
+  'originationid',
+  'originationbranchid',
+  'destinationbankid',
+  'destinationbranchid',
+  'processingtype',
+  'proctype',
+  'userid',
+  'refnumber',
+  'longitude',
+  'latitude',
+  'mileage',
+  'gaslevel',
+  'truckid',
+  'routeid',
+  'signature',
+  'seals',
+  'email',
+  'phone',
+  'vaultid',
+  'xmlresponse',
+  'batterystatus',
+  'incidentytype',
+  'image',
+  'vaultstatus',
+] as const;
 
 /**
  * Constructs DevicePostDto payloads with common fields pre-populated.
@@ -28,15 +55,17 @@ const WIRE_FIELD_NAMES: Record<string, string> = {
  * actions — this builder centralises them so feature code only has to
  * specify the action-specific bits.
  *
- * The returned object is keyed with the WIRE names (i.e. what the legacy
- * backend expects), not the TypeScript names. Callers serialise the
- * returned dict directly without further transformation.
+ * Canonical-shape guarantee
+ * =========================
+ * The returned object ALWAYS contains every CANONICAL_FIELDS key. Fields
+ * not supplied by the caller (and not auto-filled here) are set to `null`.
+ * This is required by the backend: every endpoint expects to receive the
+ * full DTO shape on the wire, and reads only the fields it needs.
  *
- * Date handling:
+ * Date handling
+ * =============
  *   `utcDateTime` is sent as ISO 8601 UTC (e.g. `2026-06-04T17:30:45.123Z`)
- *   per the canonical backend spec. The older `dd/MM/yyyy hh:mm tt` wire
- *   format used by the original legacy server is no longer applied — the
- *   modern backend handles ISO 8601 directly.
+ *   per the canonical backend spec.
  */
 @Injectable({ providedIn: 'root' })
 export class ActionBuilderService {
@@ -47,15 +76,15 @@ export class ActionBuilderService {
    * Build a DevicePostDto. Spread the overrides last so callers can override
    * any auto-filled field explicitly when needed.
    *
-   * @returns a plain object suitable for HttpClient.post — field keys
-   *          have been translated to the legacy backend's wire format.
-   *          `utcDateTime` is in ISO 8601 UTC.
+   * @returns a plain object suitable for HttpClient.post — every canonical
+   *          field is present, with `null` for fields the caller did not
+   *          set. `utcDateTime` is in ISO 8601 UTC.
    */
-  async build(overrides: Partial<DevicePostDto> = {}): Promise<Record<string, string | null | undefined>> {
+  async build(overrides: Partial<DevicePostDto> = {}): Promise<Record<string, string | null>> {
     const ctx = await this.device.getContext(true).catch(() => null);
     const userId = this.session.userId();
 
-    const base: DevicePostDto = {
+    const autoFilled: Partial<DevicePostDto> = {
       deviceId: ctx?.deviceId ?? null,
       utcDateTime: nowIsoUtc(),
       userid: userId,
@@ -63,22 +92,18 @@ export class ActionBuilderService {
         ctx?.batteryLevel !== undefined ? String(ctx.batteryLevel) : null,
     };
 
-    const merged: Partial<DevicePostDto> = { ...base, ...overrides };
-
-    return this.toWireFormat(merged);
-  }
-
-  /**
-   * Translate TypeScript field names to the legacy backend's wire field
-   * names. Undefined keys are dropped; null is preserved so the server can
-   * see an explicit null.
-   */
-  private toWireFormat(dto: Partial<DevicePostDto>): Record<string, string | null | undefined> {
-    const out: Record<string, string | null | undefined> = {};
-    for (const [k, v] of Object.entries(dto)) {
+    // Start with every canonical field set to null, then layer auto-fills,
+    // then caller overrides on top. This guarantees every wire payload
+    // contains exactly the canonical key set in a stable order.
+    const out: Record<string, string | null> = {};
+    for (const key of CANONICAL_FIELDS) {
+      out[key] = null;
+    }
+    for (const [k, v] of Object.entries({ ...autoFilled, ...overrides })) {
+      // `undefined` overrides leave the default null in place; `null` or
+      // strings (including empty strings) replace it explicitly.
       if (v === undefined) continue;
-      const wireKey = WIRE_FIELD_NAMES[k] ?? k;
-      out[wireKey] = v as string | null;
+      out[k] = v as string | null;
     }
     return out;
   }
