@@ -414,7 +414,7 @@ const CACHE_KEY_ROUTE = 'phase3.route';
             <ion-button
               expand="block"
               size="default"
-              [disabled]="!canStartDay() || dayActionWorking()"
+              [disabled]="dayActionWorking()"
               (click)="promptStartDay()"
             >
               @if (dayActionWorking()) {
@@ -552,10 +552,6 @@ export class DashboardPage implements OnInit, OnDestroy {
   protected readonly dayActionWorking = signal(false);
   private backListener?: PluginListenerHandle;
 
-  protected readonly canStartDay = computed(
-    () => !!this.truck.truck() && !!this.routeStore.route(),
-  );
-
   /** Personalised greeting line. */
   protected readonly greeting = computed(() => {
     const u = this.session.user();
@@ -667,14 +663,13 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   async promptStartDay(): Promise<void> {
-    if (!this.canStartDay()) {
-      await this.showToast('Truck and route must load before starting the day.', 'warning');
-      return;
-    }
     const truck = this.truck.truck();
     const route = this.routeStore.route();
     if (!truck?.id || !route?.routeId) {
-      await this.showToast('Incomplete assignment data. Pull to refresh.', 'warning');
+      await this.showToast(
+        'No truck or route assigned yet. Pull to refresh — once they load you can start the day.',
+        'warning',
+      );
       return;
     }
 
