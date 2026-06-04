@@ -1,56 +1,60 @@
-import {
-  Component,
-  ChangeDetectionStrategy,
-  OnInit,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IonicModule, ToastController } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Capacitor } from '@capacitor/core';
 
+import { RouteStore } from '../../core/stores/route.store';
 import { DeliveryStore } from '../../core/stores/delivery.store';
-import { BankService } from '../../core/services/bank.service';
-import { DeliveryService } from '../../core/services/delivery.service';
-import { ConnectivityService } from '../../core/services/connectivity.service';
+import { DayStore } from '../../core/stores/day.store';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
+import { CurtisIconComponent } from '../../shared/components/icon';
 import { CurtisHeaderComponent } from '../../shared/components/header';
-import { NIGERIAN_STATES } from '../../core/models/nigerian-states';
-import type { Bank, Branch } from '../../core/models';
+import type { RouteStop } from '../../core/models';
 
 /**
- * Delivery info — Phase 4, first step of the delivery chain.
+ * Delivery — stop selection list (post-E5).
  *
- * Captures bank + branch selection and performs check-in.
+ * Mirrors legacy CurtisTracker DeliveryActivity (a ListActivity). The
+ * agent picks a stop from their assigned route; the selection writes
+ * into DeliveryStore.stopId via beginDelivery() and the router opens
+ * /process which becomes the unified stop hub for that job.
  *
- *   Daily stop tapped -> DeliveryStore.beginDelivery() populates bankId /
- *   branchId if the stop had them. We hydrate the form from the store;
- *   the agent can override the selection manually.
+ * What this page does NOT do anymore (intentionally — moved to /process
+ * in sub-phase E3 as part of the stop-hub rework):
+ *   - bank/branch picking
+ *   - Check-In submission
  *
- * Cascade:
- *   State (static list) -> Branches (GET /GetBranchesByState/{state})
- *   Bank  (static list from GET /GetBanks) — used only for display/audit;
- *   the agent picks a branch which already knows its bank.
- *
- * On Check-In:
- *   - DeliveryService.checkIn posts /Check_In + status beat
- *   - DeliveryStore.markCheckedIn() flips canProceedToProcess
- *   - Navigate to /process
+ * Empty / loading states:
+ *   - Route is loading              -> spinner card
+ *   - Route loaded but no stops     -> empty-state with refresh hint
+ *   - Day not started               -> soft warning (per Q6) — taps still
+ *                                       proceed to /process; warning is
+ *                                       informational only
  */
 @Component({
   selector: 'curtis-delivery',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, CurtisHeaderComponent],
+  imports: [
+    CommonModule,
+    IonicModule,
+    OfflineBannerComponent,
+    CurtisIconComponent,
+    CurtisHeaderComponent,
+  ],
   styles: [
     `
       :host { display: block; }
-      ion-content { --background: var(--curtis-bg); }
+      ion-content {
+        --background: var(--curtis-bg);
+        --padding-bottom: calc(var(--curtis-space-20) + env(safe-area-inset-bottom, 0));
+      }
 
-      .header-strip {
+      .route-strip {
         margin: var(--curtis-space-3) var(--curtis-space-4);
-        padding: var(--curtis-space-4);
+        padding: var(--curtis-space-3) var(--curtis-space-4);
         background: var(--curtis-surface-1);
         border: 1px solid var(--curtis-border);
         border-radius: var(--curtis-radius-lg);
@@ -59,30 +63,44 @@ import type { Bank, Branch } from '../../core/models';
         align-items: center;
         gap: var(--curtis-space-3);
       }
-      .header-strip__icon {
-        width: 40px;
-        height: 40px;
+      .route-strip__icon {
+        width: 40px; height: 40px;
         border-radius: var(--curtis-radius-md);
-        background: var(--curtis-gradient-primary);
-        color: var(--ion-color-tertiary);
-        display: grid;
-        place-items: center;
-        flex-shrink: 0;
-        font-weight: var(--curtis-weight-bold);
+        background: color-mix(in srgb, var(--ion-color-primary) 12%, transparent);
+        color: var(--ion-color-primary);
+        display: grid; place-items: center;
       }
-      .header-strip__text { flex: 1; }
-      .header-strip__title {
-        font-size: var(--curtis-text-md);
-        font-weight: var(--curtis-weight-bold);
+      .route-strip__text { flex: 1; min-width: 0; }
+      .route-strip__title {
+        font-size: var(--curtis-text-base);
+        font-weight: var(--curtis-weight-semibold);
         color: var(--curtis-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
-      .header-strip__sub {
+      .route-strip__sub {
         font-size: var(--curtis-text-xs);
-        color: var(--curtis-text-muted);
+        color: var(--curtis-text-subtle);
+        margin-top: 2px;
       }
 
+      .day-warning {
+        margin: var(--curtis-space-3) var(--curtis-space-4) 0;
+        padding: 10px var(--curtis-space-3);
+        background: color-mix(in srgb, var(--amber-500) 12%, transparent);
+        border: 1px solid color-mix(in srgb, var(--amber-500) 36%, transparent);
+        border-radius: var(--curtis-radius-md);
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text);
+        display: flex;
+        gap: var(--curtis-space-2);
+        align-items: center;
+      }
+      .day-warning curtis-icon { color: var(--amber-500); }
+
       .section-label {
-        margin: var(--curtis-space-4) var(--curtis-space-5) var(--curtis-space-1);
+        margin: var(--curtis-space-3) var(--curtis-space-4) var(--curtis-space-1);
         font-size: var(--curtis-text-xs);
         font-weight: var(--curtis-weight-bold);
         letter-spacing: var(--curtis-tracking-wider);
@@ -90,225 +108,213 @@ import type { Bank, Branch } from '../../core/models';
         color: var(--curtis-text-subtle);
       }
 
-      ion-list {
-        background: transparent;
-        margin: 0 var(--curtis-space-3);
+      .stop-list {
+        margin: 0 var(--curtis-space-4);
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-2);
       }
-      ion-list[inset] ion-item {
-        --background: var(--curtis-surface-1);
-        --border-color: var(--curtis-border);
-        --min-height: 56px;
+      .stop-row {
+        display: flex;
+        align-items: center;
+        gap: var(--curtis-space-3);
+        padding: var(--curtis-space-3) var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+        cursor: pointer;
+        text-align: left;
+        transition: transform var(--curtis-duration-fast) var(--curtis-ease-out),
+                    box-shadow var(--curtis-duration-fast) var(--curtis-ease-out),
+                    border-color var(--curtis-duration-fast) var(--curtis-ease-out);
+      }
+      .stop-row:hover {
+        border-color: var(--curtis-border-strong);
+        box-shadow: var(--curtis-shadow-md);
+      }
+      .stop-row:active { transform: translateY(1px); }
+      .stop-row__seq {
+        width: 36px; height: 36px;
+        border-radius: var(--curtis-radius-pill);
+        background: color-mix(in srgb, var(--ion-color-primary) 14%, transparent);
+        color: var(--ion-color-primary);
+        display: grid; place-items: center;
+        font-weight: var(--curtis-weight-bold);
+        font-size: var(--curtis-text-sm);
+        flex-shrink: 0;
+      }
+      .stop-row__body { flex: 1; min-width: 0; }
+      .stop-row__title {
+        font-size: var(--curtis-text-sm);
+        font-weight: var(--curtis-weight-semibold);
+        color: var(--curtis-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .stop-row__sub {
+        font-size: var(--curtis-text-xs);
+        color: var(--curtis-text-subtle);
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .stop-row__meta {
+        display: flex;
+        gap: var(--curtis-space-2);
+        align-items: center;
+        margin-top: 4px;
+      }
+      .stop-pill {
+        font-size: 11px;
+        font-weight: var(--curtis-weight-semibold);
+        letter-spacing: var(--curtis-tracking-wide);
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: var(--curtis-radius-pill);
+        background: var(--curtis-surface-2);
+        color: var(--curtis-text-subtle);
+      }
+      .stop-pill.is-active {
+        background: color-mix(in srgb, var(--ion-color-primary) 14%, transparent);
+        color: var(--ion-color-primary);
+      }
+      .stop-row__chev {
+        color: var(--curtis-text-faint);
+        flex-shrink: 0;
       }
 
-      .submit {
-        padding: var(--curtis-space-5) var(--curtis-space-4) calc(var(--curtis-space-8) + env(safe-area-inset-bottom, 0));
+      .empty {
+        margin: var(--curtis-space-6) var(--curtis-space-4);
+        padding: var(--curtis-space-6) var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px dashed var(--curtis-border-strong);
+        border-radius: var(--curtis-radius-lg);
+        text-align: center;
+        color: var(--curtis-text-subtle);
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-2);
+        align-items: center;
+      }
+      .empty__icon {
+        width: 56px; height: 56px;
+        border-radius: var(--curtis-radius-pill);
+        background: var(--curtis-surface-2);
+        color: var(--curtis-text-subtle);
+        display: grid; place-items: center;
+      }
+      .empty__title {
+        font-size: var(--curtis-text-base);
+        font-weight: var(--curtis-weight-semibold);
+        color: var(--curtis-text);
       }
     `,
   ],
   template: `
-    <curtis-header title="Delivery" backHref="/daily" />
+    <curtis-header title="Delivery stops" backHref="/dashboard" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />
 
-      <div class="header-strip">
-        <div class="header-strip__icon">1</div>
-        <div class="header-strip__text">
-          <div class="header-strip__title">Check in at this stop</div>
-          <div class="header-strip__sub">Select bank and branch to register your arrival.</div>
+      <!-- Route summary strip -->
+      @if (routeStore.route(); as route) {
+        <div class="route-strip">
+          <span class="route-strip__icon">
+            <curtis-icon name="navigate-outline" size="md" />
+          </span>
+          <div class="route-strip__text">
+            <div class="route-strip__title">{{ route.clientName || 'Route ' + route.routeId }}</div>
+            <div class="route-strip__sub">
+              {{ stops().length }} {{ stops().length === 1 ? 'stop' : 'stops' }}
+              · Route {{ route.routeId }}
+            </div>
+          </div>
         </div>
-      </div>
+      }
 
-      <div class="section-label">Stop details</div>
-      <ion-list inset>
-        <ion-item>
-          <ion-select
-            label="Bank"
-            labelPlacement="stacked"
-            interface="action-sheet"
-            [(ngModel)]="selectedBankId"
-            [disabled]="loadingBanks() || submitting()"
-          >
-            @for (b of banks(); track b.id) {
-              <ion-select-option [value]="b.id">{{ b.name || b.id }}</ion-select-option>
-            }
-          </ion-select>
-        </ion-item>
+      <!-- Soft warning if day not started (per Q6) -->
+      @if (!day.dayActive()) {
+        <div class="day-warning">
+          <curtis-icon name="alert-circle-outline" size="sm" />
+          You haven't started your day. Return to Dashboard and tap Start day.
+        </div>
+      }
 
-        <ion-item>
-          <ion-select
-            label="State"
-            labelPlacement="stacked"
-            interface="action-sheet"
-            [(ngModel)]="selectedState"
-            (ionChange)="onStateChange()"
-            [disabled]="submitting()"
-          >
-            @for (s of states; track s) {
-              <ion-select-option [value]="s">{{ s }}</ion-select-option>
-            }
-          </ion-select>
-        </ion-item>
-
-        <ion-item>
-          <ion-select
-            label="Branch"
-            labelPlacement="stacked"
-            interface="action-sheet"
-            [(ngModel)]="selectedBranchId"
-            [disabled]="!selectedState || loadingBranches() || submitting()"
-          >
-            @if (loadingBranches()) {
-              <ion-select-option disabled>Loading branches…</ion-select-option>
-            } @else if (branches().length === 0 && selectedState) {
-              <ion-select-option disabled>No branches for this state</ion-select-option>
-            } @else {
-              @for (br of branches(); track br.id) {
-                <ion-select-option [value]="br.id">
-                  {{ br.name || br.address || br.id }}
-                </ion-select-option>
-              }
-            }
-          </ion-select>
-        </ion-item>
-
-        <ion-item>
-          <ion-textarea
-            label="Note (optional)"
-            labelPlacement="stacked"
-            rows="2"
-            autoGrow="true"
-            [(ngModel)]="note"
-            [disabled]="submitting()"
-          />
-        </ion-item>
-      </ion-list>
-
-      <div class="submit">
-        <ion-button
-          expand="block"
-          [disabled]="!canCheckIn() || submitting()"
-          (click)="checkIn()"
-        >
-          @if (submitting()) {
-            <ion-spinner slot="start" name="crescent" />
-            Checking in…
-          } @else {
-            Check in
+      @if (stops().length === 0) {
+        <div class="empty">
+          <span class="empty__icon">
+            <curtis-icon name="list-outline" size="md" />
+          </span>
+          <div class="empty__title">No stops on your route yet</div>
+          <div>Pull to refresh once your route has been assigned.</div>
+        </div>
+      } @else {
+        <div class="section-label">Tap a stop to open it</div>
+        <div class="stop-list">
+          @for (s of stops(); track s.referenceNumber) {
+            <button class="stop-row" type="button" (click)="onStopTap(s)">
+              <span class="stop-row__seq">{{ s.stopNumber }}</span>
+              <div class="stop-row__body">
+                <div class="stop-row__title">{{ s.destination || s.refNo }}</div>
+                @if (s.clientName) {
+                  <div class="stop-row__sub">{{ s.clientName }}</div>
+                }
+                <div class="stop-row__meta">
+                  @if (s.refNo) {
+                    <span class="stop-pill">{{ s.refNo }}</span>
+                  }
+                  @if (s.status) {
+                    <span
+                      class="stop-pill"
+                      [class.is-active]="deliveryStore.stopId() === s.referenceNumber"
+                    >
+                      {{ s.status }}
+                    </span>
+                  }
+                </div>
+              </div>
+              <curtis-icon class="stop-row__chev" name="chevron-forward-outline" size="sm" />
+            </button>
           }
-        </ion-button>
-      </div>
+        </div>
+      }
     </ion-content>
   `,
 })
-export class DeliveryPage implements OnInit {
-  private readonly deliveryStore = inject(DeliveryStore);
-  private readonly deliverySvc = inject(DeliveryService);
-  private readonly banksSvc = inject(BankService);
-  private readonly connectivity = inject(ConnectivityService);
-  private readonly toast = inject(ToastController);
+export class DeliveryPage {
+  protected readonly routeStore = inject(RouteStore);
+  protected readonly deliveryStore = inject(DeliveryStore);
+  protected readonly day = inject(DayStore);
   private readonly router = inject(Router);
 
-  protected readonly states = NIGERIAN_STATES;
-  protected readonly banks = signal<Bank[]>([]);
-  protected readonly branches = signal<Branch[]>([]);
-  protected readonly loadingBanks = signal(false);
-  protected readonly loadingBranches = signal(false);
-  protected readonly submitting = signal(false);
+  /** Convenience signal — sorted by stopNumber ascending. */
+  protected readonly stops = computed<RouteStop[]>(() => {
+    const list = this.routeStore.stops();
+    return [...list].sort((a, b) => (a.stopNumber || 0) - (b.stopNumber || 0));
+  });
 
-  protected selectedBankId: string | null = null;
-  protected selectedState: string | null = null;
-  protected selectedBranchId: string | null = null;
-  protected note = '';
-
-  async ngOnInit(): Promise<void> {
-    // Pre-fill from DeliveryStore (populated when the agent tapped a stop).
-    this.selectedBankId = this.deliveryStore.bankId();
-    this.selectedBranchId = this.deliveryStore.branchId();
-    this.selectedState = this.deliveryStore.state();
-
-    await this.loadBanks();
-    if (this.selectedState) {
-      await this.loadBranches(this.selectedState);
-    }
-  }
-
-  protected canCheckIn(): boolean {
-    return !!this.selectedBankId && !!this.selectedBranchId;
-  }
-
-  protected async onStateChange(): Promise<void> {
-    this.selectedBranchId = null;
-    if (this.selectedState) {
-      await this.loadBranches(this.selectedState);
-    } else {
-      this.branches.set([]);
-    }
-  }
-
-  private async loadBanks(): Promise<void> {
-    this.loadingBanks.set(true);
-    try {
-      const banks = await this.banksSvc.getBanksWithCache();
-      this.banks.set(banks);
-    } finally {
-      this.loadingBanks.set(false);
-    }
-  }
-
-  private async loadBranches(state: string): Promise<void> {
-    this.loadingBranches.set(true);
-    try {
-      const list = await this.banksSvc.getBranchesByStateWithCache(state);
-      this.branches.set(list);
-    } finally {
-      this.loadingBranches.set(false);
-    }
-  }
-
-  protected async checkIn(): Promise<void> {
-    if (!this.canCheckIn() || this.submitting()) return;
-
-    const bankId = String(this.selectedBankId);
-    const branchId = String(this.selectedBranchId);
-
-    this.deliveryStore.setBankBranch({
-      bankId,
-      branchId,
-      state: this.selectedState,
+  /**
+   * Open a stop. Mirrors legacy DeliveryActivity row tap: write the stop
+   * into DeliveryStore and start the stop hub (/process).
+   */
+  protected async onStopTap(stop: RouteStop): Promise<void> {
+    this.deliveryStore.beginDelivery({
+      stopId: stop.referenceNumber,
+      branchId: stop.branchId || null,
     });
+    await this.haptic();
+    await this.router.navigateByUrl('/process');
+  }
 
-    this.submitting.set(true);
+  private async haptic(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
     try {
-      await this.deliverySvc.checkIn({
-        bankId,
-        branchId,
-        note: this.note.trim() || undefined,
-      });
-      await this.router.navigateByUrl('/process');
-    } catch (err) {
-      await this.showToast(this.describeError(err, 'Check-in failed.'), 'danger');
-    } finally {
-      this.submitting.set(false);
+      await Haptics.impact({ style: ImpactStyle.Light });
+    } catch {
+      // no-op
     }
-  }
-
-  private describeError(err: unknown, fallback: string): string {
-    if (err && typeof err === 'object') {
-      const e = err as { message?: string };
-      if (typeof e.message === 'string' && e.message.trim()) return e.message;
-    }
-    return fallback;
-  }
-
-  private async showToast(message: string, color: 'danger' | 'warning' | 'success') {
-    const t = await this.toast.create({
-      message,
-      duration: 2500,
-      position: 'top',
-      color,
-      buttons: [{ icon: 'close', role: 'cancel' }],
-    });
-    await t.present();
   }
 }
