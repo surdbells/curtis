@@ -32,15 +32,15 @@ export class DayStore {
   }));
 
   startDay(args: {
-    truckId: string;
-    routeId: string;
+    truckId?: string | null;
+    routeId?: string | null;
     mileage: string;
     gasLevel: string;
     timestamp: string;
   }): void {
     this._dayActive.set(true);
-    this._truckId.set(args.truckId);
-    this._routeId.set(args.routeId);
+    this._truckId.set(args.truckId ?? null);
+    this._routeId.set(args.routeId ?? null);
     this._openingMileage.set(args.mileage);
     this._openingGasLevel.set(args.gasLevel);
     this._startedAt.set(args.timestamp);

@@ -664,13 +664,6 @@ export class DashboardPage implements OnInit, OnDestroy {
   async promptStartDay(): Promise<void> {
     const truck = this.truck.truck();
     const route = this.routeStore.route();
-    if (!truck?.id || !route?.routeId) {
-      await this.showToast(
-        'No truck or route assigned yet. Pull to refresh — once they load you can start the day.',
-        'warning',
-      );
-      return;
-    }
 
     const alert = await this.alerts.create({
       header: 'Start day',
@@ -690,7 +683,12 @@ export class DashboardPage implements OnInit, OnDestroy {
               void this.showToast('Mileage and gas level are both required (gas 0–100).', 'warning');
               return false;
             }
-            void this.runStartDay({ mileage, gasLevel, truckId: String(truck.id), routeId: String(route.routeId) });
+            void this.runStartDay({
+              mileage,
+              gasLevel,
+              truckId: truck?.id != null ? String(truck.id) : null,
+              routeId: route?.routeId != null ? String(route.routeId) : null,
+            });
             return true;
           },
         },
@@ -729,7 +727,10 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   private async runStartDay(input: {
-    mileage: string; gasLevel: string; truckId: string; routeId: string;
+    mileage: string;
+    gasLevel: string;
+    truckId?: string | null;
+    routeId?: string | null;
   }): Promise<void> {
     this.dayActionWorking.set(true);
     try {

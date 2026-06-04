@@ -9,8 +9,10 @@ import { nowIsoUtc } from '../utils';
 import { ACTION, STATUS } from '../models';
 
 export interface StartDayInput {
-  truckId: string;
-  routeId: string;
+  /** Optional. Backend accepts null if no truck is assigned at start. */
+  truckId?: string | null;
+  /** Optional. Backend accepts null if no route is assigned at start. */
+  routeId?: string | null;
   mileage: string;
   gasLevel: string;
 }
@@ -50,12 +52,14 @@ export class DayService {
   async start(input: StartDayInput): Promise<void> {
     const coords = await this.location.tryGetCurrent();
     const timestamp = nowIsoUtc();
+    const truckId = input.truckId ?? null;
+    const routeId = input.routeId ?? null;
     const dto = await this.builder.build({
       action: ACTION.START_DAY,
       status: STATUS.OK,
       utcDateTime: timestamp,
-      truckid: input.truckId,
-      routeid: input.routeId,
+      truckid: truckId,
+      routeid: routeId,
       mileage: input.mileage,
       gaslevel: input.gasLevel,
       latitude: coords ? String(coords.latitude) : null,
@@ -65,8 +69,8 @@ export class DayService {
     await firstValueFrom(this.api.post<unknown>('/start_day', dto));
 
     this.dayStore.startDay({
-      truckId: input.truckId,
-      routeId: input.routeId,
+      truckId,
+      routeId,
       mileage: input.mileage,
       gasLevel: input.gasLevel,
       timestamp,
