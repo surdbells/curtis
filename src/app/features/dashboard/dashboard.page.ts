@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { AlertController, IonicModule, ToastController } from '@ionic/angular';
+import { ActionSheetController, AlertController, IonicModule, ToastController } from '@ionic/angular';
 import { App } from '@capacitor/app';
 import { Haptics, NotificationType, ImpactStyle } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
@@ -545,6 +545,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   private readonly dayService = inject(DayService);
   private readonly cache = inject(ReferenceCacheService);
   private readonly alerts = inject(AlertController);
+  private readonly actionSheets = inject(ActionSheetController);
   private readonly toast = inject(ToastController);
   private readonly router = inject(Router);
 
@@ -667,25 +668,21 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     const alert = await this.alerts.create({
       header: 'Start day',
-      message: 'Record opening mileage and gas level to begin the route.',
+      message: 'Step 1 of 2 — Record opening mileage.',
       inputs: [
-        { name: 'mileage',  type: 'number', placeholder: 'Opening mileage', min: 0, attributes: { inputmode: 'numeric' } },
-        { name: 'gasLevel', type: 'number', placeholder: 'Gas level (%)',   min: 0, max: 100, attributes: { inputmode: 'numeric' } },
+        { name: 'mileage', type: 'number', placeholder: 'Opening mileage', min: 0, attributes: { inputmode: 'numeric' } },
       ],
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
-          text: 'Start',
-          handler: (data: { mileage?: string; gasLevel?: string }) => {
+          text: 'Next',
+          handler: (data: { mileage?: string }) => {
             const mileage = (data.mileage ?? '').trim();
-            const gasLevel = (data.gasLevel ?? '').trim();
-            if (!this.isPositiveNumber(mileage) || !this.isPercentNumber(gasLevel)) {
-              void this.showToast('Mileage and gas level are both required (gas 0–100).', 'warning');
+            if (!this.isPositiveNumber(mileage)) {
+              void this.showToast('Mileage is required (positive number).', 'warning');
               return false;
             }
-            void this.runStartDay({
-              mileage,
-              gasLevel,
+            void this.promptStartDayGas(mileage, {
               truckId: truck?.id != null ? String(truck.id) : null,
               routeId: route?.routeId != null ? String(route.routeId) : null,
             });
@@ -697,33 +694,71 @@ export class DashboardPage implements OnInit, OnDestroy {
     await alert.present();
   }
 
+  /** Step 2 of Start Day: pick gas level (Full / Medium / Low). */
+  private async promptStartDayGas(
+    mileage: string,
+    assignment: { truckId: string | null; routeId: string | null },
+  ): Promise<void> {
+    const sheet = await this.actionSheets.create({
+      header: 'Step 2 of 2 — Gas level',
+      buttons: [
+        {
+          text: 'Full',
+          handler: () => void this.runStartDay({ mileage, gasLevel: 'Full', ...assignment }),
+        },
+        {
+          text: 'Medium',
+          handler: () => void this.runStartDay({ mileage, gasLevel: 'Medium', ...assignment }),
+        },
+        {
+          text: 'Low',
+          handler: () => void this.runStartDay({ mileage, gasLevel: 'Low', ...assignment }),
+        },
+        { text: 'Cancel', role: 'cancel' },
+      ],
+    });
+    await sheet.present();
+  }
+
   async promptEndDay(): Promise<void> {
     const alert = await this.alerts.create({
       header: 'End day',
-      message: 'Record closing mileage and gas level to end the route.',
+      message: 'Step 1 of 2 — Record closing mileage.',
       inputs: [
-        { name: 'mileage',  type: 'number', placeholder: 'Closing mileage', min: 0, attributes: { inputmode: 'numeric' } },
-        { name: 'gasLevel', type: 'number', placeholder: 'Gas level (%)',   min: 0, max: 100, attributes: { inputmode: 'numeric' } },
+        { name: 'mileage', type: 'number', placeholder: 'Closing mileage', min: 0, attributes: { inputmode: 'numeric' } },
       ],
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
-          text: 'End day',
+          text: 'Next',
           role: 'destructive',
-          handler: (data: { mileage?: string; gasLevel?: string }) => {
+          handler: (data: { mileage?: string }) => {
             const mileage = (data.mileage ?? '').trim();
-            const gasLevel = (data.gasLevel ?? '').trim();
-            if (!this.isPositiveNumber(mileage) || !this.isPercentNumber(gasLevel)) {
-              void this.showToast('Mileage and gas level are both required (gas 0–100).', 'warning');
+            if (!this.isPositiveNumber(mileage)) {
+              void this.showToast('Mileage is required (positive number).', 'warning');
               return false;
             }
-            void this.runEndDay({ mileage, gasLevel });
+            void this.promptEndDayGas(mileage);
             return true;
           },
         },
       ],
     });
     await alert.present();
+  }
+
+  /** Step 2 of End Day: pick gas level (Full / Medium / Low). */
+  private async promptEndDayGas(mileage: string): Promise<void> {
+    const sheet = await this.actionSheets.create({
+      header: 'Step 2 of 2 — Gas level',
+      buttons: [
+        { text: 'Full',   handler: () => void this.runEndDay({ mileage, gasLevel: 'Full' }) },
+        { text: 'Medium', handler: () => void this.runEndDay({ mileage, gasLevel: 'Medium' }) },
+        { text: 'Low',    handler: () => void this.runEndDay({ mileage, gasLevel: 'Low' }) },
+        { text: 'Cancel', role: 'cancel' },
+      ],
+    });
+    await sheet.present();
   }
 
   private async runStartDay(input: {
@@ -787,12 +822,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (!v) return false;
     const n = Number(v);
     return Number.isFinite(n) && n >= 0;
-  }
-
-  private isPercentNumber(v: string): boolean {
-    if (!v) return false;
-    const n = Number(v);
-    return Number.isFinite(n) && n >= 0 && n <= 100;
   }
 
   private describeError(err: unknown, fallback: string): string {
