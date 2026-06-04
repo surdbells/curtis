@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom, Observable, tap } from 'rxjs';
+import { firstValueFrom, Observable, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { ReferenceCacheService } from './reference-cache.service';
 import { XmlLoaderService } from './xml-loader.service';
@@ -22,6 +22,21 @@ const CACHE_KEY_BRANCHES = (state: string, clientType: string) =>
  * The XML fallback is bank-only — branches.xml does not encode state,
  * so getBranchesByStateWithCache falls back to filtering by bank id
  * instead when a state-keyed branch list is unavailable.
+ *
+ * Wire-shape normalisation
+ * ========================
+ * The live API uses verbose, server-specific field names:
+ *   Branch: { branchId, branch, clientid, clientName, branchAddress, state }
+ *   Bank:   { clientid, clientName, ... }
+ *
+ * Internal models expect the canonical shape:
+ *   Branch: { id, name, bankId, bankName, address, state }
+ *   Bank:   { id, name, code }
+ *
+ * Both `normalizeBranch` and `normalizeBank` accept either shape — if
+ * `id`/`name` are already present they pass through, otherwise the server
+ * field names are mapped in. This keeps the XML fallback working
+ * unchanged while making the live API responses usable.
  */
 @Injectable({ providedIn: 'root' })
 export class BankService {
@@ -31,13 +46,15 @@ export class BankService {
 
   /** GET /GetBanks — returns all banks. */
   getBanks(): Observable<Bank[]> {
-    return this.api.get<Bank[]>('/GetBanks').pipe(
+    return this.api.get<unknown[]>('/GetBanks').pipe(
+      map((list) => (list ?? []).map((b) => this.normalizeBank(b))),
       tap((banks) => void this.cache.set(CACHE_KEY_BANKS, banks)),
     );
   }
 
   async getBanksWithCache(): Promise<Bank[]> {
-    const cached = (await this.cache.get<Bank[]>(CACHE_KEY_BANKS)) ?? [];
+    const rawCached = (await this.cache.get<unknown[]>(CACHE_KEY_BANKS)) ?? [];
+    const cached = rawCached.map((b) => this.normalizeBank(b)).filter((b) => b.id && b.name);
     if (cached.length > 0) {
       // Still fire a background refresh.
       void firstValueFrom(this.getBanks()).catch(() => undefined);
@@ -78,14 +95,18 @@ export class BankService {
    */
   getBranchesByState(state: string, clientType: string = 'Bank'): Observable<Branch[]> {
     const path = `/GetBranchesByState/${encodeURIComponent(state)}`;
-    return this.api.get<Branch[]>(path, { clientType }).pipe(
+    return this.api.get<unknown[]>(path, { clientType }).pipe(
+      map((list) => (list ?? []).map((b) => this.normalizeBranch(b))),
       tap((branches) => void this.cache.set(CACHE_KEY_BRANCHES(state, clientType), branches)),
     );
   }
 
   async getBranchesByStateWithCache(state: string, clientType: string = 'Bank'): Promise<Branch[]> {
     const key = CACHE_KEY_BRANCHES(state, clientType);
-    const cached = (await this.cache.get<Branch[]>(key)) ?? [];
+    const rawCached = (await this.cache.get<unknown[]>(key)) ?? [];
+    const cached = rawCached
+      .map((b) => this.normalizeBranch(b))
+      .filter((b) => b.id && b.name);
     if (cached.length > 0) {
       void firstValueFrom(this.getBranchesByState(state, clientType)).catch(() => undefined);
       return cached;
@@ -108,5 +129,58 @@ export class BankService {
    */
   async getBranchesForBank(bankId: string): Promise<Branch[]> {
     return this.xml.loadBranchesForBank(bankId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Wire-shape normalisers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Coerce a raw branch object (from API or XML) into the canonical Branch
+   * shape used by the rest of the app. Accepts either:
+   *   Server:  { branchId, branch, clientid, clientName, branchAddress, state }
+   *   Canonical/XML: { id, name, bankId, bankName, address, state }
+   */
+  private normalizeBranch(raw: unknown): Branch {
+    const b = (raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {});
+    const pickString = (...keys: string[]): string | undefined => {
+      for (const k of keys) {
+        const v = b[k];
+        if (typeof v === 'string' && v.length > 0) return v;
+      }
+      return undefined;
+    };
+    return {
+      ...b,
+      id: pickString('id', 'branchId') ?? '',
+      name: pickString('name', 'branch') ?? '',
+      bankId: pickString('bankId', 'clientid') ?? '',
+      bankName: pickString('bankName', 'clientName'),
+      state: pickString('state'),
+      address: pickString('address', 'branchAddress'),
+    } as Branch;
+  }
+
+  /**
+   * Coerce a raw bank object (from API or XML) into the canonical Bank shape.
+   * Accepts either:
+   *   Server:    { clientid, clientName, ... }
+   *   Canonical/XML: { id, name, code }
+   */
+  private normalizeBank(raw: unknown): Bank {
+    const b = (raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {});
+    const pickString = (...keys: string[]): string | undefined => {
+      for (const k of keys) {
+        const v = b[k];
+        if (typeof v === 'string' && v.length > 0) return v;
+      }
+      return undefined;
+    };
+    return {
+      ...b,
+      id: pickString('id', 'clientid', 'clientId') ?? '',
+      name: pickString('name', 'clientName') ?? '',
+      code: pickString('code'),
+    } as Bank;
   }
 }
