@@ -64,20 +64,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/process/process.page').then((m) => m.ProcessPage),
   },
   {
-    path: 'signature',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/signature/signature.page').then((m) => m.SignaturePage),
-  },
-  {
-    path: 'delivery-checkout',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/delivery-checkout/delivery-checkout.page').then(
-        (m) => m.DeliveryCheckoutPage,
-      ),
-  },
-  {
     path: 'manual-evacuation',
     canActivate: [authGuard],
     loadComponent: () =>

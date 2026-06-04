@@ -567,7 +567,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     { label: "Today's stops", icon: 'list-outline',           route: '/daily',               requiresDay: false },
     { label: 'Delivery',      icon: 'swap-horizontal-outline', route: '/delivery',           requiresDay: false },
     { label: 'Process',       icon: 'cog-outline',            route: '/process',             requiresDay: false },
-    { label: 'Signature',     icon: 'create-outline',         route: '/signature',           requiresDay: false },
     { label: 'Route seals',   icon: 'qr-code-outline',        route: '/route-scan',          requiresDay: false },
     { label: 'Bank seals',    icon: 'barcode-outline',        route: '/bank-scan',           requiresDay: false },
     { label: 'Manual evac',   icon: 'document-text-outline',  route: '/manual-evacuation',   requiresDay: false, tone: 'tertiary' },
