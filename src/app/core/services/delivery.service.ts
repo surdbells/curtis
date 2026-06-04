@@ -15,12 +15,20 @@ export interface CheckInInput {
   note?: string;
 }
 
-export interface ProcessInput {
-  processingType?: string;
-  procType?: string;
-  seals?: string;
-  note?: string;
-}
+/**
+ * Canonical status values posted to /PostStatusByUserId from the Status
+ * step (between Scan and Sign in the stop hub).
+ *
+ * Spelling and casing are intentionally exactly as the backend expects.
+ */
+export type DeliveryStatus = 'PICKED UP' | 'IN-TRANSIT' | 'DELIVERED' | 'COMPLETED';
+
+export const DELIVERY_STATUSES: readonly DeliveryStatus[] = [
+  'PICKED UP',
+  'IN-TRANSIT',
+  'DELIVERED',
+  'COMPLETED',
+] as const;
 
 export interface CheckOutInput {
   /** Optional note entered by the agent. */
@@ -71,26 +79,30 @@ export class DeliveryService {
     this.delivery.markCheckedIn(timestamp);
   }
 
-  async postProcess(input: ProcessInput): Promise<void> {
-    // No dedicated /Process endpoint on the API — process state is
-    // captured via PostStatusByUserId with action='process'.
-    const coords = await this.location.tryGetCurrent();
+  /**
+   * Status step (between Scan and Sign in the stop hub). Posts the user-
+   * selected status to /PostStatusByUserId.
+   *
+   * Wire payload (backend spec):
+   *   refnumber, userid, utcDateTime, status
+   * Builder adds deviceId + batterystatus too; harmless extras.
+   *
+   * On success, DeliveryStore.statusUpdate is set so the stepper can
+   * advance to the Sign step.
+   */
+  async postStatus(status: DeliveryStatus): Promise<void> {
+    const refnumber = this.delivery.stopId();
+    if (!refnumber) {
+      throw new Error('No active stop selected.');
+    }
     const dto = await this.builder.build({
-      action: ACTION.PROCESS,
-      status: STATUS.OK,
-      processingtype: input.processingType ?? null,
-      proctype: input.procType ?? null,
-      seals: input.seals ?? null,
-      note: input.note ?? null,
-      bankid: this.delivery.bankId(),
-      branchid: this.delivery.branchId(),
-      routeid: this.day.routeId(),
-      truckid: this.day.truckId(),
-      latitude: coords ? String(coords.latitude) : null,
-      longitude: coords ? String(coords.longitude) : null,
+      refnumber,
+      status,
+      utcDateTime: nowIsoUtc(),
     });
 
     await firstValueFrom(this.api.post<unknown>('/PostStatusByUserId', dto));
+    this.delivery.markStatusUpdated(status);
     this.delivery.markProcessComplete();
   }
 

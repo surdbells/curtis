@@ -17,7 +17,7 @@ import { Capacitor } from '@capacitor/core';
 import { DeliveryStore } from '../../core/stores/delivery.store';
 import { RouteStore } from '../../core/stores/route.store';
 import { DayStore } from '../../core/stores/day.store';
-import { DeliveryService } from '../../core/services/delivery.service';
+import { DeliveryService, DELIVERY_STATUSES, type DeliveryStatus } from '../../core/services/delivery.service';
 import { BankService } from '../../core/services/bank.service';
 import { ScannerService, type ScanSession } from '../../core/services/scanner.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
@@ -244,16 +244,17 @@ import type { Seal, RouteStop, Branch } from '../../core/models';
       /* --- Step indicator strip (Steps 1-2 in E3; 3-4 in E4) --- */
       .stepper {
         display: flex;
-        gap: var(--curtis-space-2);
+        gap: var(--curtis-space-1);
         margin: var(--curtis-space-3) var(--curtis-space-4) 0;
       }
       .step {
         flex: 1;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 4px;
-        padding: var(--curtis-space-2) var(--curtis-space-1);
+        padding: var(--curtis-space-2) 4px;
         border-radius: var(--curtis-radius-md);
         background: var(--curtis-surface-1);
         border: 1px solid var(--curtis-border);
@@ -270,11 +271,16 @@ import type { Seal, RouteStop, Branch } from '../../core/models';
         font-weight: var(--curtis-weight-bold);
       }
       .step__label {
-        font-size: 11px;
+        font-size: 10px;
         font-weight: var(--curtis-weight-semibold);
         color: var(--curtis-text-subtle);
-        letter-spacing: var(--curtis-tracking-wide);
+        letter-spacing: 0.04em;
         text-transform: uppercase;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
       }
       .step.is-active {
         border-color: var(--ion-color-primary);
@@ -385,6 +391,65 @@ import type { Seal, RouteStop, Branch } from '../../core/models';
         color: var(--green-600);
       }
 
+      /* --- Step 3 (Status) status-selector card --- */
+      .status-card {
+        margin: var(--curtis-space-3) var(--curtis-space-4) var(--curtis-space-4);
+        padding: var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-3);
+      }
+      .status-card__heading {
+        font-size: var(--curtis-text-base);
+        font-weight: var(--curtis-weight-semibold);
+        color: var(--curtis-text);
+      }
+      .status-card__sub {
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text-subtle);
+        margin-top: -10px;
+      }
+      .status-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--curtis-space-2);
+      }
+      .status-chip {
+        padding: var(--curtis-space-3) var(--curtis-space-3);
+        background: var(--curtis-surface-2);
+        border: 1.5px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-md);
+        color: var(--curtis-text);
+        font-size: var(--curtis-text-sm);
+        font-weight: var(--curtis-weight-semibold);
+        letter-spacing: var(--curtis-tracking-wide);
+        text-transform: uppercase;
+        cursor: pointer;
+        text-align: center;
+        transition: border-color var(--curtis-duration-fast) var(--curtis-ease-out),
+                    background var(--curtis-duration-fast) var(--curtis-ease-out),
+                    transform var(--curtis-duration-fast) var(--curtis-ease-out);
+      }
+      .status-chip:hover:not(:disabled) {
+        border-color: var(--curtis-border-strong);
+      }
+      .status-chip:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+      .status-chip.is-selected {
+        border-color: var(--ion-color-primary);
+        background: color-mix(in srgb, var(--ion-color-primary) 12%, var(--curtis-surface-1));
+        color: var(--ion-color-primary);
+      }
+      .status-chip:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
       /* Soft day-not-started warning (E3, per Q6). */
       .day-warning {
         margin: var(--curtis-space-3) var(--curtis-space-4) 0;
@@ -427,10 +492,14 @@ import type { Seal, RouteStop, Branch } from '../../core/models';
         </div>
         <div class="step" [class.is-active]="currentStep() === 3" [class.is-done]="currentStep() > 3">
           <span class="step__num">3</span>
+          <span class="step__label">Status</span>
+        </div>
+        <div class="step" [class.is-active]="currentStep() === 4" [class.is-done]="currentStep() > 4">
+          <span class="step__num">4</span>
           <span class="step__label">Sign</span>
         </div>
-        <div class="step" [class.is-active]="currentStep() === 4">
-          <span class="step__num">4</span>
+        <div class="step" [class.is-active]="currentStep() === 5">
+          <span class="step__num">5</span>
           <span class="step__label">Check out</span>
         </div>
       </div>
@@ -630,57 +699,51 @@ import type { Seal, RouteStop, Branch } from '../../core/models';
         @if (scanComplete()) {
           <div class="complete-banner">
             <curtis-icon name="checkmark-circle-outline" size="sm" />
-            All expected seals confirmed. Record processing details below.
+            All expected seals confirmed. Update the delivery status to continue.
           </div>
 
-          <div class="section-label">Processing</div>
-          <ion-list inset>
-            <ion-item>
-              <ion-input
-                label="Processing type"
-                labelPlacement="stacked"
-                [(ngModel)]="processingType"
-                [disabled]="submitting()"
-              />
-            </ion-item>
-            <ion-item>
-              <ion-input
-                label="Proc type"
-                labelPlacement="stacked"
-                [(ngModel)]="procType"
-                [disabled]="submitting()"
-              />
-            </ion-item>
-            <ion-item>
-              <ion-textarea
-                label="Note (optional)"
-                labelPlacement="stacked"
-                rows="3"
-                autoGrow="true"
-                [(ngModel)]="note"
-                [disabled]="submitting()"
-              />
-            </ion-item>
-          </ion-list>
+          <!-- STEP 3 — Status -->
+          @if (!deliveryStore.hasStatusUpdate()) {
+            <section class="status-card">
+              <div class="status-card__heading">Update status</div>
+              <div class="status-card__sub">
+                Choose the current state of this delivery. This is reported to
+                the back-office immediately.
+              </div>
 
-          <div class="curtis-submit-zone">
-            <ion-button expand="block" [disabled]="submitting() || deliveryStore.processComplete()" (click)="submit()">
-              @if (submitting()) {
-                <ion-spinner slot="start" name="crescent" />
-                Recording…
-              } @else if (deliveryStore.processComplete()) {
-                <curtis-icon slot="start" name="checkmark-outline" size="sm" />
-                Processing saved
-              } @else {
-                Save & continue
-                <curtis-icon slot="end" name="arrow-forward-outline" size="sm" />
-              }
-            </ion-button>
-          </div>
+              <div class="status-grid">
+                @for (opt of statusOptions; track opt) {
+                  <button
+                    type="button"
+                    class="status-chip"
+                    [class.is-selected]="selectedStatus() === opt"
+                    [disabled]="statusSubmitting()"
+                    (click)="selectStatus(opt)"
+                  >
+                    {{ opt }}
+                  </button>
+                }
+              </div>
+
+              <ion-button
+                expand="block"
+                [disabled]="!selectedStatus() || statusSubmitting()"
+                (click)="submitStatus()"
+              >
+                @if (statusSubmitting()) {
+                  <ion-spinner slot="start" name="crescent" />
+                  Updating status…
+                } @else {
+                  <curtis-icon slot="start" name="cloud-upload-outline" size="sm" />
+                  Submit status
+                }
+              </ion-button>
+            </section>
+          }
         }
 
-        <!-- STEP 3 — Sign -->
-        @if (deliveryStore.processComplete() && !deliveryStore.hasSignature()) {
+        <!-- STEP 4 — Sign -->
+        @if (deliveryStore.hasStatusUpdate() && !deliveryStore.hasSignature()) {
           <section class="sign-card">
             <div class="sign-card__heading">Capture signature</div>
             <div class="sign-card__sub">
@@ -705,7 +768,7 @@ import type { Seal, RouteStop, Branch } from '../../core/models';
           </section>
         }
 
-        <!-- STEP 4 — Check out -->
+        <!-- STEP 5 — Check out -->
         @if (deliveryStore.canCheckOut() && !deliveryStore.checkOutAt()) {
           <section class="checkout-card">
             <div class="checkout-card__heading">Check out</div>
@@ -760,7 +823,6 @@ export class ProcessPage implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastController);
 
-  protected readonly submitting = signal(false);
   protected readonly scanning = signal(false);
 
   // --- Step 1 (Check-in) state -----------------------------------------------
@@ -774,7 +836,7 @@ export class ProcessPage implements OnInit, OnDestroy {
   protected checkInNote = '';
   // ---------------------------------------------------------------------------
 
-  // --- Step 3 (Sign) + Step 4 (Check-out) state ------------------------------
+  // --- Step 4 (Sign) + Step 5 (Check-out) state ------------------------------
   /** Most recent data-URL emitted by <curtis-signature-pad>. Cleared after save. */
   protected readonly lastSignatureDataUrl = signal<string | null>(null);
   protected readonly signatureSubmitting = signal(false);
@@ -790,9 +852,11 @@ export class ProcessPage implements OnInit, OnDestroy {
     { kind: 'success' | 'warning' | 'danger'; code: string; message: string } | null
   >(null);
 
-  protected processingType = '';
-  protected procType = '';
-  protected note = '';
+  // --- Step 3 (Status) state -------------------------------------------------
+  protected readonly statusOptions = DELIVERY_STATUSES;
+  protected readonly selectedStatus = signal<DeliveryStatus | null>(null);
+  protected readonly statusSubmitting = signal(false);
+  // ---------------------------------------------------------------------------
 
   /** The active stop, resolved by matching DeliveryStore.stopId against RouteStore.stops. */
   protected readonly activeStop = computed<RouteStop | null>(() => {
@@ -830,15 +894,20 @@ export class ProcessPage implements OnInit, OnDestroy {
   });
 
   /**
-   * Which step the agent is currently on, 1-4. Drives the stepper UI.
-   * In E3 we model steps 1 (Check in) and 2 (Scan). Steps 3 (Sign) and
-   * 4 (Check out) are placeholders until E4 lands.
+   * Which step the agent is currently on, 1-5. Drives the stepper UI.
+   *
+   *   1 - Check in    (until DeliveryStore.isCheckedIn)
+   *   2 - Scan        (until scanComplete)
+   *   3 - Status      (until DeliveryStore.hasStatusUpdate)
+   *   4 - Sign        (until DeliveryStore.hasSignature)
+   *   5 - Check out
    */
-  protected readonly currentStep = computed<1 | 2 | 3 | 4>(() => {
+  protected readonly currentStep = computed<1 | 2 | 3 | 4 | 5>(() => {
     if (!this.deliveryStore.isCheckedIn()) return 1;
     if (!this.scanComplete()) return 2;
-    if (!this.deliveryStore.hasSignature()) return 3;
-    return 4;
+    if (!this.deliveryStore.hasStatusUpdate()) return 3;
+    if (!this.deliveryStore.hasSignature()) return 4;
+    return 5;
   });
 
   /**
@@ -1027,32 +1096,35 @@ export class ProcessPage implements OnInit, OnDestroy {
     void this.haptic('error');
   }
 
-  protected async submit(): Promise<void> {
-    if (this.submitting()) return;
-    if (!this.scanComplete()) return;
-    this.submitting.set(true);
+  // --- Step 3 (Status) methods -----------------------------------------------
+
+  /** Tap on a status chip. */
+  protected selectStatus(status: DeliveryStatus): void {
+    if (this.statusSubmitting()) return;
+    this.selectedStatus.set(status);
+  }
+
+  /** Submit the chosen status to /PostStatusByUserId. */
+  protected async submitStatus(): Promise<void> {
+    const status = this.selectedStatus();
+    if (!status || this.statusSubmitting() || !this.scanComplete()) return;
+    this.statusSubmitting.set(true);
     try {
       await this.stopScan();
-      // Legacy wire convention: seals as a single comma-separated string.
-      const sealsCsv = this.localScanned().filter(Boolean).join(',');
-      await this.deliverySvc.postProcess({
-        processingType: this.processingType.trim() || undefined,
-        procType: this.procType.trim() || undefined,
-        seals: sealsCsv || undefined,
-        note: this.note.trim() || undefined,
-      });
-      this.deliveryStore.markProcessComplete();
-      // Flow continues inline — the stepper advances to Step 3 (Sign) and
-      // the signature card unfolds below. No navigation.
+      await this.deliverySvc.postStatus(status);
       await this.haptic('success');
+      await this.showToast('Status updated.', 'success');
+      // Flow continues inline — the stepper advances to Step 4 (Sign) and the
+      // signature card unfolds below. No navigation.
     } catch (err) {
-      await this.showToast(this.describeError(err, 'Could not save process details.'), 'danger');
+      await this.haptic('error');
+      await this.showToast(this.describeError(err, 'Could not update status.'), 'danger');
     } finally {
-      this.submitting.set(false);
+      this.statusSubmitting.set(false);
     }
   }
 
-  // --- Step 3 (Sign) methods -------------------------------------------------
+  // --- Step 4 (Sign) methods -------------------------------------------------
 
   /** Called every time the recipient lifts their finger on the signature pad. */
   protected onSignatureCaptured(dataUrl: string): void {
@@ -1076,7 +1148,7 @@ export class ProcessPage implements OnInit, OnDestroy {
     }
   }
 
-  // --- Step 4 (Check-out) methods --------------------------------------------
+  // --- Step 5 (Check-out) methods --------------------------------------------
 
   protected async doCheckOut(): Promise<void> {
     if (this.checkOutSubmitting()) return;
@@ -1093,9 +1165,7 @@ export class ProcessPage implements OnInit, OnDestroy {
       this.localScanned.set([]);
       this.lastSignatureDataUrl.set(null);
       this.checkOutNote = '';
-      this.note = '';
-      this.processingType = '';
-      this.procType = '';
+      this.selectedStatus.set(null);
       // Per Q4: navigate to Dashboard after check-out.
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (err) {

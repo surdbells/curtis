@@ -18,6 +18,8 @@ export class DeliveryStore {
   private readonly _state = signal<string | null>(null);
   private readonly _checkInAt = signal<string | null>(null);
   private readonly _processComplete = signal<boolean>(false);
+  /** Status string picked at the Status step (e.g. 'DELIVERED'). */
+  private readonly _statusUpdate = signal<string | null>(null);
   private readonly _signatureBase64 = signal<string | null>(null);
   private readonly _checkOutAt = signal<string | null>(null);
 
@@ -27,10 +29,12 @@ export class DeliveryStore {
   readonly state = this._state.asReadonly();
   readonly checkInAt = this._checkInAt.asReadonly();
   readonly processComplete = this._processComplete.asReadonly();
+  readonly statusUpdate = this._statusUpdate.asReadonly();
   readonly signatureBase64 = this._signatureBase64.asReadonly();
   readonly checkOutAt = this._checkOutAt.asReadonly();
 
   readonly isCheckedIn = computed(() => !!this._checkInAt());
+  readonly hasStatusUpdate = computed(() => !!this._statusUpdate());
   readonly hasSignature = computed(() => !!this._signatureBase64());
   readonly canCheckOut = computed(
     () => this.isCheckedIn() && this.hasSignature(),
@@ -52,6 +56,7 @@ export class DeliveryStore {
     this._state.set(args.state ?? null);
     this._checkInAt.set(null);
     this._processComplete.set(false);
+    this._statusUpdate.set(null);
     this._signatureBase64.set(null);
     this._checkOutAt.set(null);
   }
@@ -69,6 +74,11 @@ export class DeliveryStore {
 
   markProcessComplete(): void {
     this._processComplete.set(true);
+  }
+
+  /** Record the status string chosen at the Status step (Step 3 of stop hub). */
+  markStatusUpdated(status: string): void {
+    this._statusUpdate.set(status);
   }
 
   setSignature(base64: string): void {
@@ -91,6 +101,7 @@ export class DeliveryStore {
     this._state.set(null);
     this._checkInAt.set(null);
     this._processComplete.set(false);
+    this._statusUpdate.set(null);
     this._signatureBase64.set(null);
     this._checkOutAt.set(null);
   }
