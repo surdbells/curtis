@@ -16,41 +16,37 @@ import { Capacitor } from '@capacitor/core';
 
 import { DeliveryStore } from '../../core/stores/delivery.store';
 import { RouteStore } from '../../core/stores/route.store';
+import { DayStore } from '../../core/stores/day.store';
 import { DeliveryService } from '../../core/services/delivery.service';
+import { BankService } from '../../core/services/bank.service';
 import { ScannerService, type ScanSession } from '../../core/services/scanner.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
 import { CurtisHeaderComponent, CurtisHeaderStatusComponent } from '../../shared/components/header';
 import { SealListComponent } from '../../shared/components/seal-list/seal-list.component';
 import { ScanButtonComponent } from '../../shared/components/scan-button/scan-button.component';
-import type { Seal, RouteStop } from '../../core/models';
+import { NIGERIAN_STATES } from '../../core/models/nigerian-states';
+import type { Seal, RouteStop, Bank, Branch } from '../../core/models';
 
 /**
- * Process — second step of the delivery chain, with inline seal scanning.
+ * Process — the stop hub. All interaction with a single stop happens here:
  *
- * Mirrors legacy CurtisTracker ProcessActivity behaviour:
+ *   Step 1. Check in   — pick bank + branch, optional note, POST /Check_In
+ *   Step 2. Scan seals — match expected seals from the route
+ *   Step 3. Sign       — agent + recipient signature  (added in E4)
+ *   Step 4. Check out  — POST /check_out             (added in E4)
  *
- *   1. Agent arrives at this screen after Check-In on Delivery.
- *   2. Expected seals for the active stop are resolved from RouteStore.
- *   3. Scanner is started inline — each scan is classified:
- *        - matches expected (not yet counted) → tick green, advance count
- *        - matches expected (already counted) → "Has been counted"
- *        - else                                → "Not found, please confirm"
- *   4. Once all expected seals are matched, the scanner hides and the
- *      processing form (processingType, procType, note) is revealed.
- *   5. Submit posts via DeliveryService.postProcess with the matched
- *      seal IDs as a comma-separated string (legacy wire convention).
- *   6. On success → navigate to /signature.
+ * This replaces the previous flow that split work across /delivery,
+ * /process, /signature, and /delivery-checkout. The new design mirrors
+ * legacy CurtisTracker ProcessActivity intent — one page per stop, with
+ * check-in and check-out adjacent to the seal-scanning UI rather than
+ * buried in a 3-dot menu.
  *
- * The legacy app additionally triggered an inline check_in() POST when
- * the agent scanned the job's branchId barcode. Our app uses a dedicated
- * Delivery page for check-in (with explicit bank/branch + note), so
- * that branch-scan check-in path is intentionally NOT replicated here.
- * The "must be checked in" guard enforces correct sequencing.
+ * Sub-phase E3 (this commit) introduces Step 1 inline. Step 3 (signature)
+ * and Step 4 (check-out) follow in sub-phase E4.
  *
  * Scanned-seals state is local to this page (not stored in DeliveryStore).
- * Backing out and re-entering starts fresh — appropriate for the use
- * case (agent realised wrong stop, wants to restart cleanly).
+ * Backing out and re-entering starts the scan fresh.
  */
 @Component({
   selector: 'curtis-process',
@@ -242,6 +238,131 @@ import type { Seal, RouteStop } from '../../core/models';
         gap: var(--curtis-space-2);
         align-items: center;
       }
+
+      /* --- Step indicator strip (Steps 1-2 in E3; 3-4 in E4) --- */
+      .stepper {
+        display: flex;
+        gap: var(--curtis-space-2);
+        margin: var(--curtis-space-3) var(--curtis-space-4) 0;
+      }
+      .step {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: var(--curtis-space-2) var(--curtis-space-1);
+        border-radius: var(--curtis-radius-md);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        transition: border-color var(--curtis-duration-fast) var(--curtis-ease-out),
+                    background var(--curtis-duration-fast) var(--curtis-ease-out);
+      }
+      .step__num {
+        width: 22px; height: 22px;
+        display: grid; place-items: center;
+        border-radius: var(--curtis-radius-pill);
+        background: var(--curtis-surface-2);
+        color: var(--curtis-text-subtle);
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-bold);
+      }
+      .step__label {
+        font-size: 11px;
+        font-weight: var(--curtis-weight-semibold);
+        color: var(--curtis-text-subtle);
+        letter-spacing: var(--curtis-tracking-wide);
+        text-transform: uppercase;
+      }
+      .step.is-active {
+        border-color: var(--ion-color-primary);
+        background: color-mix(in srgb, var(--ion-color-primary) 6%, var(--curtis-surface-1));
+      }
+      .step.is-active .step__num {
+        background: var(--ion-color-primary);
+        color: white;
+      }
+      .step.is-active .step__label {
+        color: var(--curtis-text);
+      }
+      .step.is-done {
+        border-color: color-mix(in srgb, var(--green-500) 50%, transparent);
+        background: color-mix(in srgb, var(--green-500) 6%, var(--curtis-surface-1));
+      }
+      .step.is-done .step__num {
+        background: var(--green-500);
+        color: white;
+      }
+      .step.is-done .step__label {
+        color: var(--green-600);
+      }
+
+      /* --- Check-in panel (Step 1) --- */
+      .checkin-card {
+        margin: var(--curtis-space-3) var(--curtis-space-4) var(--curtis-space-4);
+        padding: var(--curtis-space-4);
+        background: var(--curtis-surface-1);
+        border: 1px solid var(--curtis-border);
+        border-radius: var(--curtis-radius-lg);
+        box-shadow: var(--curtis-shadow-xs);
+        display: flex;
+        flex-direction: column;
+        gap: var(--curtis-space-3);
+      }
+      .checkin-card__heading {
+        font-size: var(--curtis-text-base);
+        font-weight: var(--curtis-weight-semibold);
+        color: var(--curtis-text);
+      }
+      .checkin-card__sub {
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text-subtle);
+        margin-top: -10px;
+      }
+      .checkin-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .checkin-field__label {
+        font-size: var(--curtis-text-xs);
+        font-weight: var(--curtis-weight-semibold);
+        color: var(--curtis-text-subtle);
+        letter-spacing: var(--curtis-tracking-wide);
+        text-transform: uppercase;
+      }
+      .checkin-field ion-select,
+      .checkin-field ion-textarea,
+      .checkin-field ion-input {
+        --background: var(--curtis-surface-2);
+        --color: var(--curtis-text);
+        --placeholder-color: var(--curtis-text-faint);
+        --padding-start: var(--curtis-space-3);
+        --padding-end: var(--curtis-space-3);
+        --padding-top: 10px;
+        --padding-bottom: 10px;
+        border-radius: var(--curtis-radius-md);
+        border: 1px solid var(--curtis-border);
+        font-size: var(--curtis-text-sm);
+      }
+      .checkin-submit {
+        margin-top: var(--curtis-space-1);
+      }
+
+      /* Soft day-not-started warning (E3, per Q6). */
+      .day-warning {
+        margin: var(--curtis-space-3) var(--curtis-space-4) 0;
+        padding: 10px var(--curtis-space-3);
+        background: color-mix(in srgb, var(--amber-500) 12%, transparent);
+        border: 1px solid color-mix(in srgb, var(--amber-500) 36%, transparent);
+        border-radius: var(--curtis-radius-md);
+        font-size: var(--curtis-text-sm);
+        color: var(--curtis-text);
+        display: flex;
+        gap: var(--curtis-space-2);
+        align-items: center;
+      }
+      .day-warning curtis-icon { color: var(--amber-500); }
     `,
   ],
   template: `
@@ -258,11 +379,133 @@ import type { Seal, RouteStop } from '../../core/models';
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />
 
-      @if (!deliveryStore.isCheckedIn()) {
-        <div class="warning">
-          <curtis-icon name="warning-outline" size="sm" />
-          Not checked in. Return and check in first.
+      <!-- Stepper — top of page, always visible inside Process -->
+      <div class="stepper">
+        <div class="step" [class.is-active]="currentStep() === 1" [class.is-done]="currentStep() > 1">
+          <span class="step__num">1</span>
+          <span class="step__label">Check in</span>
         </div>
+        <div class="step" [class.is-active]="currentStep() === 2" [class.is-done]="currentStep() > 2">
+          <span class="step__num">2</span>
+          <span class="step__label">Scan</span>
+        </div>
+        <div class="step" [class.is-active]="currentStep() === 3" [class.is-done]="currentStep() > 3">
+          <span class="step__num">3</span>
+          <span class="step__label">Sign</span>
+        </div>
+        <div class="step" [class.is-active]="currentStep() === 4">
+          <span class="step__num">4</span>
+          <span class="step__label">Check out</span>
+        </div>
+      </div>
+
+      <!-- Soft warning if day hasn't started (per Q6) -->
+      @if (!day.dayActive()) {
+        <div class="day-warning">
+          <curtis-icon name="alert-circle-outline" size="sm" />
+          You haven't started your day. Return to Dashboard and tap Start day.
+        </div>
+      }
+
+      <!-- STEP 1 — Check in -->
+      @if (!deliveryStore.isCheckedIn()) {
+        @if (activeStop(); as stop) {
+          <div class="stop-summary">
+            <div class="stop-summary__title">{{ stop.destination || stop.refNo }}</div>
+            @if (stop.clientName) {
+              <div class="stop-summary__sub">{{ stop.clientName }}</div>
+            }
+            <div class="stop-summary__meta">
+              @if (stop.refNo) {
+                <span><curtis-icon name="receipt-outline" size="xs" /> Ref {{ stop.refNo }}</span>
+              }
+              @if (stop.stopNumber) {
+                <span><curtis-icon name="navigate-outline" size="xs" /> Stop #{{ stop.stopNumber }}</span>
+              }
+            </div>
+          </div>
+        }
+
+        <section class="checkin-card">
+          <div class="checkin-card__heading">Check in to this stop</div>
+          <div class="checkin-card__sub">
+            Pick the bank and branch you're delivering to, add an optional note,
+            then check in to begin scanning seals.
+          </div>
+
+          <div class="checkin-field">
+            <label class="checkin-field__label" for="ci-bank">Bank</label>
+            <ion-select
+              id="ci-bank"
+              interface="action-sheet"
+              placeholder="Select bank"
+              [(ngModel)]="selectedBankId"
+              [disabled]="loadingBanks() || checkInSubmitting()"
+            >
+              @for (b of banks(); track b.id) {
+                <ion-select-option [value]="b.id">{{ b.name }}</ion-select-option>
+              }
+            </ion-select>
+          </div>
+
+          <div class="checkin-field">
+            <label class="checkin-field__label" for="ci-state">State</label>
+            <ion-select
+              id="ci-state"
+              interface="action-sheet"
+              placeholder="Select state"
+              [(ngModel)]="selectedState"
+              (ionChange)="onStateChange()"
+              [disabled]="checkInSubmitting()"
+            >
+              @for (s of states; track s) {
+                <ion-select-option [value]="s">{{ s }}</ion-select-option>
+              }
+            </ion-select>
+          </div>
+
+          <div class="checkin-field">
+            <label class="checkin-field__label" for="ci-branch">Branch</label>
+            <ion-select
+              id="ci-branch"
+              interface="action-sheet"
+              [placeholder]="selectedState ? 'Select branch' : 'Pick state first'"
+              [(ngModel)]="selectedBranchId"
+              [disabled]="!selectedState || loadingBranches() || checkInSubmitting()"
+            >
+              @for (br of branches(); track br.id) {
+                <ion-select-option [value]="br.id">{{ br.name }}</ion-select-option>
+              }
+            </ion-select>
+          </div>
+
+          <div class="checkin-field">
+            <label class="checkin-field__label" for="ci-note">Note (optional)</label>
+            <ion-textarea
+              id="ci-note"
+              [(ngModel)]="checkInNote"
+              [disabled]="checkInSubmitting()"
+              placeholder="Anything the office should know"
+              [autoGrow]="true"
+              rows="2"
+            />
+          </div>
+
+          <ion-button
+            class="checkin-submit"
+            expand="block"
+            [disabled]="!canCheckIn() || checkInSubmitting()"
+            (click)="doCheckIn()"
+          >
+            @if (checkInSubmitting()) {
+              <ion-spinner slot="start" name="crescent" />
+              Checking in…
+            } @else {
+              <curtis-icon slot="start" name="log-in-outline" size="sm" />
+              Check in
+            }
+          </ion-button>
+        </section>
       } @else {
         <div class="curtis-form-strip">
           <div class="curtis-form-strip__icon">2</div>
@@ -418,13 +661,29 @@ import type { Seal, RouteStop } from '../../core/models';
 export class ProcessPage implements OnInit, OnDestroy {
   protected readonly deliveryStore = inject(DeliveryStore);
   protected readonly routeStore = inject(RouteStore);
+  protected readonly day = inject(DayStore);
   private readonly deliverySvc = inject(DeliveryService);
+  private readonly banksSvc = inject(BankService);
   private readonly scanner = inject(ScannerService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastController);
 
   protected readonly submitting = signal(false);
   protected readonly scanning = signal(false);
+
+  // --- Step 1 (Check-in) state -----------------------------------------------
+  protected readonly states = NIGERIAN_STATES;
+  protected readonly banks = signal<Bank[]>([]);
+  protected readonly branches = signal<Branch[]>([]);
+  protected readonly loadingBanks = signal(false);
+  protected readonly loadingBranches = signal(false);
+  protected readonly checkInSubmitting = signal(false);
+
+  protected selectedBankId: string | null = null;
+  protected selectedState: string | null = null;
+  protected selectedBranchId: string | null = null;
+  protected checkInNote = '';
+  // ---------------------------------------------------------------------------
 
   /** Scanned seal IDs, local to this page. De-duplicated on insert. */
   protected readonly localScanned = signal<readonly string[]>([]);
@@ -474,6 +733,18 @@ export class ProcessPage implements OnInit, OnDestroy {
   });
 
   /**
+   * Which step the agent is currently on, 1-4. Drives the stepper UI.
+   * In E3 we model steps 1 (Check in) and 2 (Scan). Steps 3 (Sign) and
+   * 4 (Check out) are placeholders until E4 lands.
+   */
+  protected readonly currentStep = computed<1 | 2 | 3 | 4>(() => {
+    if (!this.deliveryStore.isCheckedIn()) return 1;
+    if (!this.scanComplete()) return 2;
+    if (!this.deliveryStore.hasSignature()) return 3;
+    return 4;
+  });
+
+  /**
    * Composed list for <curtis-seal-list> — every expected seal becomes
    * a row with status 'scanned' or 'pending'. Unexpected scans (the
    * agent scanned something not in the expected list) are appended.
@@ -495,14 +766,86 @@ export class ProcessPage implements OnInit, OnDestroy {
   private session?: ScanSession;
 
   async ngOnInit(): Promise<void> {
-    // Hard guard — Process requires Check-In. The template also shows a
-    // warning, but if the agent somehow bypasses the UI (deep link), we
-    // bounce to /delivery.
+    // Pre-fill the check-in panel from DeliveryStore (populated when the
+    // agent tapped a stop on the Delivery list or arrived via deep link).
+    this.selectedBankId = this.deliveryStore.bankId();
+    this.selectedBranchId = this.deliveryStore.branchId();
+    this.selectedState = this.deliveryStore.state();
+
+    // If not yet checked in, hydrate the bank/branch pickers.
     if (!this.deliveryStore.isCheckedIn()) {
-      // The warning template will render. Avoid auto-starting the scanner.
-      return;
+      await this.loadBanks();
+      if (this.selectedState) {
+        await this.loadBranches(this.selectedState);
+      }
     }
   }
+
+  // --- Step 1 (Check-in) methods --------------------------------------------
+
+  protected canCheckIn(): boolean {
+    return !!this.selectedBankId && !!this.selectedBranchId;
+  }
+
+  protected async onStateChange(): Promise<void> {
+    this.selectedBranchId = null;
+    if (this.selectedState) {
+      await this.loadBranches(this.selectedState);
+    } else {
+      this.branches.set([]);
+    }
+  }
+
+  private async loadBanks(): Promise<void> {
+    this.loadingBanks.set(true);
+    try {
+      const list = await this.banksSvc.getBanksWithCache();
+      this.banks.set(list);
+    } finally {
+      this.loadingBanks.set(false);
+    }
+  }
+
+  private async loadBranches(state: string): Promise<void> {
+    this.loadingBranches.set(true);
+    try {
+      const list = await this.banksSvc.getBranchesByStateWithCache(state);
+      this.branches.set(list);
+    } finally {
+      this.loadingBranches.set(false);
+    }
+  }
+
+  protected async doCheckIn(): Promise<void> {
+    if (!this.canCheckIn() || this.checkInSubmitting()) return;
+
+    const bankId = String(this.selectedBankId);
+    const branchId = String(this.selectedBranchId);
+
+    this.deliveryStore.setBankBranch({
+      bankId,
+      branchId,
+      state: this.selectedState,
+    });
+
+    this.checkInSubmitting.set(true);
+    try {
+      await this.deliverySvc.checkIn({
+        bankId,
+        branchId,
+        note: this.checkInNote.trim() || undefined,
+      });
+      await this.haptic('success');
+      await this.showToast('Checked in. You can scan seals now.', 'success');
+    } catch (err) {
+      await this.haptic('error');
+      await this.showToast(this.describeError(err, 'Check-in failed.'), 'danger');
+    } finally {
+      this.checkInSubmitting.set(false);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
 
   async ngOnDestroy(): Promise<void> {
     await this.session?.stop();
