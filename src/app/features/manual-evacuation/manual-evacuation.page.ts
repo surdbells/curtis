@@ -21,19 +21,22 @@ import { CurtisIconComponent } from '../../shared/components/icon';
 import { CurtisHeaderComponent } from '../../shared/components/header';
 import { NIGERIAN_STATES } from '../../core/models/nigerian-states';
 import type { ScanSession } from '../../core/services/scanner.service';
-import type { Branch } from '../../core/models';
+import type { Bank, Branch } from '../../core/models';
 
 /**
  * Manual evacuation — Phase 5.
  *
  * Agent-initiated evacuation when the standard route flow doesn't apply.
  *
- * Origin + Destination both use the live /GetBranchesByState endpoint via
- * BankService (no XML fallback for branch lookup). Flow: pick state ->
- * branches load from server -> pick branch. Each branch carries its
- * bank id + name, so the bank picker is gone — we derive
- * `originationid` / `destinationbankid` from the selected branch when
- * submitting.
+ * Branch loading is split across two live endpoints to match the backend
+ * data model:
+ *   Origin       — /GetBranchesByState (pick state -> pick branch). Each
+ *                  branch carries its bank id + name so origin bank is
+ *                  derived from the selected branch (no separate bank
+ *                  picker).
+ *   Destination  — /GetBanks (pick bank only). Legacy ManualActivity
+ *                  hardcodes destinationbranchid to "" — we match that
+ *                  by sending only destinationbankid on the wire.
  *
  * Wire payload mirrors legacy ManualActivity field mappings (see
  * EvacuationService docs).
@@ -175,30 +178,14 @@ import type { Branch } from '../../core/models';
       <ion-list inset>
         <ion-item>
           <ion-select
-            label="Destination state"
+            label="Destination bank"
             labelPlacement="stacked"
             interface="action-sheet"
-            [(ngModel)]="destState"
-            (ionChange)="onDestStateChange()"
-            [disabled]="submitting()"
+            [(ngModel)]="destBankId"
+            [disabled]="banks().length === 0 || submitting()"
           >
-            @for (s of states; track s) {
-              <ion-select-option [value]="s">{{ s }}</ion-select-option>
-            }
-          </ion-select>
-        </ion-item>
-        <ion-item>
-          <ion-select
-            label="Destination branch"
-            labelPlacement="stacked"
-            interface="action-sheet"
-            [(ngModel)]="destBranchId"
-            [disabled]="!destState || destBranches().length === 0 || submitting()"
-          >
-            @for (br of destBranches(); track br.id) {
-              <ion-select-option [value]="br.id">
-                {{ br.name }}{{ br.bankName ? ' — ' + br.bankName : '' }}
-              </ion-select-option>
+            @for (b of banks(); track b.id) {
+              <ion-select-option [value]="b.id">{{ b.name }}</ion-select-option>
             }
           </ion-select>
         </ion-item>
@@ -290,17 +277,18 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
 
   protected readonly states = NIGERIAN_STATES;
   protected readonly originBranches = signal<Branch[]>([]);
-  protected readonly destBranches = signal<Branch[]>([]);
+  /** Destination uses /GetBanks (bank-only picker, no branch). Legacy
+   *  ManualActivity hardcoded destinationbranchid to "" — we match that. */
+  protected readonly banks = signal<Bank[]>([]);
   protected readonly sealIds = signal<string[]>([]);
   protected readonly scanning = signal(false);
   protected readonly submitting = signal(false);
   protected readonly loadingOriginBranches = signal(false);
-  protected readonly loadingDestBranches = signal(false);
+  protected readonly loadingBanks = signal(false);
 
   protected originState: string | null = null;
   protected originBranchId: string | null = null;
-  protected destState: string | null = null;
-  protected destBranchId: string | null = null;
+  protected destBankId: string | null = null;
   /**
    * Defaults to the standard manual-evacuation processing type code so the
    * wire payload sends `proctype: "B-CIT-M"` out of the box. The agent can
@@ -324,7 +312,13 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
   }
 
   async ngOnInit(): Promise<void> {
-    // No upfront load — branches load when the user picks a state.
+    // Origin branches load on state pick. Destination banks load once here.
+    this.loadingBanks.set(true);
+    try {
+      this.banks.set(await this.bankSvc.getBanksWithCache());
+    } finally {
+      this.loadingBanks.set(false);
+    }
   }
 
   async ngOnDestroy(): Promise<void> {
@@ -347,29 +341,9 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
     }
   }
 
-  async onDestStateChange(): Promise<void> {
-    this.destBranchId = null;
-    if (!this.destState) {
-      this.destBranches.set([]);
-      return;
-    }
-    this.loadingDestBranches.set(true);
-    try {
-      const list = await this.bankSvc.getBranchesByStateWithCache(this.destState, 'Bank');
-      this.destBranches.set(list);
-    } finally {
-      this.loadingDestBranches.set(false);
-    }
-  }
-
   /** Look up the bank ID + name carried on the selected origin branch. */
   private originBranchRecord(): Branch | undefined {
     return this.originBranches().find((b) => b.id === this.originBranchId);
-  }
-
-  /** Look up the bank ID carried on the selected destination branch. */
-  private destBranchRecord(): Branch | undefined {
-    return this.destBranches().find((b) => b.id === this.destBranchId);
   }
 
   async startScan(): Promise<void> {
@@ -412,7 +386,6 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
     await this.stopScan();
 
     const originBranch = this.originBranchRecord();
-    const destBranch = this.destBranchRecord();
     if (!originBranch?.bankId) {
       await this.showToast('Origin branch is missing its bank id.', 'danger');
       return;
@@ -423,8 +396,10 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
       await this.evac.postManual({
         bankId: originBranch.bankId,
         branchId: originBranch.id,
-        destinationBankId: destBranch?.bankId || undefined,
-        destinationBranchId: destBranch?.id || undefined,
+        destinationBankId: this.destBankId ?? undefined,
+        // Legacy ManualActivity hardcodes destinationbranchid to ""; we
+        // mirror that — destination is a bank-only selection.
+        destinationBranchId: undefined,
         procType: this.procType.trim() || undefined,
         sealIds: this.sealIds(),
         note: this.note.trim() || undefined,
