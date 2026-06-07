@@ -1,6 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  NgZone,
   OnInit,
   OnDestroy,
   inject,
@@ -285,6 +286,7 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
   private readonly connectivity = inject(ConnectivityService);
   private readonly toast = inject(ToastController);
   private readonly router = inject(Router);
+  private readonly zone = inject(NgZone);
 
   protected readonly states = NIGERIAN_STATES;
   protected readonly originBranches = signal<Branch[]>([]);
@@ -299,7 +301,12 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
   protected originBranchId: string | null = null;
   protected destState: string | null = null;
   protected destBranchId: string | null = null;
-  protected procType = '';
+  /**
+   * Defaults to the standard manual-evacuation processing type code so the
+   * wire payload sends `proctype: "B-CIT-M"` out of the box. The agent can
+   * still override it via the input if a different code is needed.
+   */
+  protected procType = 'B-CIT-M';
   protected note = '';
 
   private session?: ScanSession;
@@ -370,9 +377,16 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
     this.scanning.set(true);
     try {
       this.session = await this.scanner.startContinuous((value) => {
-        const v = value.trim();
-        if (!v) return;
-        this.sealIds.update((arr) => (arr.includes(v) ? arr : [...arr, v]));
+        // The native BarcodeScanner plugin emits scan callbacks OUTSIDE
+        // Angular's NgZone, so OnPush change detection won't always tick
+        // after we update the sealIds signal. Re-enter the zone here so
+        // the seal count chip + Submit button reflect the new seal
+        // immediately (without waiting for the next user tap).
+        this.zone.run(() => {
+          const v = value.trim();
+          if (!v) return;
+          this.sealIds.update((arr) => (arr.includes(v) ? arr : [...arr, v]));
+        });
       });
     } catch (err) {
       this.scanning.set(false);
