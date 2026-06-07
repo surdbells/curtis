@@ -3,7 +3,6 @@ import {
   ChangeDetectionStrategy,
   OnInit,
   OnDestroy,
-  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -305,9 +304,17 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
 
   private session?: ScanSession;
 
-  protected readonly canSubmit = computed(
-    () => !!this.originBranchId && this.sealIds().length > 0,
-  );
+  /**
+   * Submit is enabled once an origin branch is picked and at least one seal
+   * is scanned. Implemented as a method (not a computed signal) because
+   * `originBranchId` is a plain `[(ngModel)]`-bound property — signal-based
+   * `computed()` only re-runs when signal dependencies change, so plain
+   * property writes wouldn't update it. ngModel emissions trigger OnPush
+   * change detection, which re-evaluates this method fresh each time.
+   */
+  protected canSubmit(): boolean {
+    return !!this.originBranchId && this.sealIds().length > 0;
+  }
 
   async ngOnInit(): Promise<void> {
     // No upfront load — branches load when the user picks a state.
