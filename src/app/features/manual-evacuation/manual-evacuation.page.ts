@@ -45,7 +45,13 @@ import type { Bank, Branch } from '../../core/models';
   styles: [
     `
       :host { display: block; }
-      ion-content { --background: var(--curtis-bg); }
+      ion-content {
+        --background: var(--curtis-bg);
+        /* Reserve scroll headroom so the Submit button always clears the
+         * system nav / safe-area on phone-sized viewports. The form can
+         * be long: origin + destination + details + seal list. */
+        --padding-bottom: calc(var(--curtis-space-24) + env(safe-area-inset-bottom, 0));
+      }
       ion-list { background: transparent; margin: 0 var(--curtis-space-3); }
       ion-list[inset] ion-item {
         --background: var(--curtis-surface-1);
@@ -199,7 +205,7 @@ import type { Bank, Branch } from '../../core/models';
           <ion-input
             label="Processing type"
             labelPlacement="stacked"
-            [(ngModel)]="processingType"
+            [(ngModel)]="procType"
             [disabled]="submitting()"
           />
         </ion-item>
@@ -287,7 +293,7 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
   protected originBranchId: string | null = null;
   protected destBankId: string | null = null;
   protected destBranchId: string | null = null;
-  protected processingType = '';
+  protected procType = '';
   protected note = '';
 
   private session?: ScanSession;
@@ -360,8 +366,9 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
       await this.evac.postManual({
         bankId: this.originBankId!,
         branchId: this.originBranchId!,
+        destinationBankId: this.destBankId ?? undefined,
         destinationBranchId: this.destBranchId ?? undefined,
-        processingType: this.processingType.trim() || undefined,
+        procType: this.procType.trim() || undefined,
         sealIds: this.sealIds(),
         note: this.note.trim() || undefined,
       });
