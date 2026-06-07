@@ -68,7 +68,15 @@ import type { Seal, RouteStop, Branch } from '../../core/models';
   styles: [
     `
       :host { display: block; }
-      ion-content { --background: var(--curtis-bg); }
+      ion-content {
+        --background: var(--curtis-bg);
+        /* Reserve scroll headroom so multiply-stacked cards (check-in,
+         * scan, status, sign, check-out) all reach above the system safe
+         * area when scrolled. Especially important for Step 3 (Status)
+         * whose 2x2 chip grid + Submit button can be the tallest
+         * content. */
+        --padding-bottom: calc(var(--curtis-space-24) + env(safe-area-inset-bottom, 0));
+      }
       ion-list { background: transparent; margin: 0 var(--curtis-space-3); }
       ion-list[inset] ion-item {
         --background: var(--curtis-surface-1);
