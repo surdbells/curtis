@@ -35,38 +35,50 @@ export interface CheckOutInput {
 }
 
 /**
- * Backend returns this envelope when the agent tries to check in for a
- * stop they're already checked in for:
- *   { status: "-1", message: "Your previous action was a check_in", data: null }
+ * Backend returns this envelope shape when the agent tries to perform the
+ * same action twice (re-entry, retry, lost response on flaky network):
+ *
+ *   { status: "-1",
+ *     message: "Your previous action was a check_in" /* or check_out *\/,
+ *     data: null }
  *
  * The HTTP status code on this response is 400, so Angular's HttpClient
  * throws an HttpErrorResponse before ApiService.unwrap() runs — the
  * envelope ends up at `err.error`, not at the top-level `.message`.
  *
  * On unrelated unwrap-path errors (200 OK with status != "0") the envelope
- * IS thrown directly and the message sits at the top level. This guard
+ * IS thrown directly and the message sits at the top level. The detector
  * checks both shapes so the soft-success path triggers regardless of
  * which delivery vector the backend used.
  *
- * The regex is tolerant of wording drift: case, punctuation, separators
- * between "check" and "in" (underscore / dash / space / nothing).
+ * Regexes tolerate wording drift: case, punctuation, separators
+ * between "check" and the suffix (underscore / dash / space / nothing).
  */
-const CHECK_IN_REPEAT_RE = /previous\s+action\s+was\s+a?\s*check[_\s-]?in/i;
+const REPEAT_CHECK_IN_RE = /previous\s+action\s+was\s+a?\s*check[_\s-]?in/i;
+const REPEAT_CHECK_OUT_RE = /previous\s+action\s+was\s+a?\s*check[_\s-]?out/i;
 
-function isAlreadyCheckedInError(err: unknown): boolean {
+function messageMatches(err: unknown, pattern: RegExp): boolean {
   if (!err || typeof err !== 'object') return false;
   const e = err as { message?: unknown; error?: unknown };
 
   // Case 1: HttpErrorResponse (400 path) — envelope is at err.error.
   if (e.error && typeof e.error === 'object') {
     const inner = (e.error as { message?: unknown }).message;
-    if (typeof inner === 'string' && CHECK_IN_REPEAT_RE.test(inner)) return true;
+    if (typeof inner === 'string' && pattern.test(inner)) return true;
   }
 
   // Case 2: thrown envelope from ApiService.unwrap (200 OK + status != "0").
-  if (typeof e.message === 'string' && CHECK_IN_REPEAT_RE.test(e.message)) return true;
+  if (typeof e.message === 'string' && pattern.test(e.message)) return true;
 
   return false;
+}
+
+function isAlreadyCheckedInError(err: unknown): boolean {
+  return messageMatches(err, REPEAT_CHECK_IN_RE);
+}
+
+function isAlreadyCheckedOutError(err: unknown): boolean {
+  return messageMatches(err, REPEAT_CHECK_OUT_RE);
 }
 
 /**
@@ -198,7 +210,13 @@ export class DeliveryService {
       longitude: coords ? String(coords.longitude) : null,
     });
 
-    await firstValueFrom(this.api.post<unknown>('/check_out', dto));
+    await firstValueFrom(this.api.post<unknown>('/check_out', dto)).catch((err) => {
+      // Idempotency: backend reports "Your previous action was a check_out"
+      // (HTTP 400) when the agent retries (lost response, re-entry, etc.).
+      // Treat that as success — the stop is already closed server-side.
+      if (isAlreadyCheckedOutError(err)) return;
+      throw err;
+    });
     this.delivery.markCheckedOut(timestamp);
 
     // Delivery complete — reset the store so the next stop starts fresh.
