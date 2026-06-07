@@ -19,23 +19,24 @@ import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
 import { CurtisHeaderComponent } from '../../shared/components/header';
+import { NIGERIAN_STATES } from '../../core/models/nigerian-states';
 import type { ScanSession } from '../../core/services/scanner.service';
-import type { Bank, Branch } from '../../core/models';
+import type { Branch } from '../../core/models';
 
 /**
  * Manual evacuation — Phase 5.
  *
  * Agent-initiated evacuation when the standard route flow doesn't apply.
  *
- * Fields per legacy ManualActivity.java: bankid, branchid (origination),
- * destinationbranchid, processingtype, seals (comma-separated), note.
+ * Origin + Destination both use the live /GetBranchesByState endpoint via
+ * BankService (no XML fallback for branch lookup). Flow: pick state ->
+ * branches load from server -> pick branch. Each branch carries its
+ * bank id + name, so the bank picker is gone — we derive
+ * `originationid` / `destinationbankid` from the selected branch when
+ * submitting.
  *
- * Bank picker is offline-first (BankService cache + XML fallback). Once a
- * bank is picked, the branches dropdown is loaded from the XML manifest
- * (no per-bank API endpoint exists).
- *
- * Seals are scanned continuously via ScannerService and accumulate as an
- * array of strings — comma-joined on submit by EvacuationService.
+ * Wire payload mirrors legacy ManualActivity field mappings (see
+ * EvacuationService docs).
  */
 @Component({
   selector: 'curtis-manual-evacuation',
@@ -141,15 +142,15 @@ import type { Bank, Branch } from '../../core/models';
       <ion-list inset>
         <ion-item>
           <ion-select
-            label="Origin bank"
+            label="Origin state"
             labelPlacement="stacked"
             interface="action-sheet"
-            [(ngModel)]="originBankId"
-            (ionChange)="onOriginBankChange()"
+            [(ngModel)]="originState"
+            (ionChange)="onOriginStateChange()"
             [disabled]="submitting()"
           >
-            @for (b of banks(); track b.id) {
-              <ion-select-option [value]="b.id">{{ b.name }}</ion-select-option>
+            @for (s of states; track s) {
+              <ion-select-option [value]="s">{{ s }}</ion-select-option>
             }
           </ion-select>
         </ion-item>
@@ -159,10 +160,12 @@ import type { Bank, Branch } from '../../core/models';
             labelPlacement="stacked"
             interface="action-sheet"
             [(ngModel)]="originBranchId"
-            [disabled]="!originBankId || originBranches().length === 0 || submitting()"
+            [disabled]="!originState || originBranches().length === 0 || submitting()"
           >
             @for (br of originBranches(); track br.id) {
-              <ion-select-option [value]="br.id">{{ br.name }}</ion-select-option>
+              <ion-select-option [value]="br.id">
+                {{ br.name }}{{ br.bankName ? ' — ' + br.bankName : '' }}
+              </ion-select-option>
             }
           </ion-select>
         </ion-item>
@@ -172,15 +175,15 @@ import type { Bank, Branch } from '../../core/models';
       <ion-list inset>
         <ion-item>
           <ion-select
-            label="Destination bank"
+            label="Destination state"
             labelPlacement="stacked"
             interface="action-sheet"
-            [(ngModel)]="destBankId"
-            (ionChange)="onDestBankChange()"
+            [(ngModel)]="destState"
+            (ionChange)="onDestStateChange()"
             [disabled]="submitting()"
           >
-            @for (b of banks(); track b.id) {
-              <ion-select-option [value]="b.id">{{ b.name }}</ion-select-option>
+            @for (s of states; track s) {
+              <ion-select-option [value]="s">{{ s }}</ion-select-option>
             }
           </ion-select>
         </ion-item>
@@ -190,10 +193,12 @@ import type { Bank, Branch } from '../../core/models';
             labelPlacement="stacked"
             interface="action-sheet"
             [(ngModel)]="destBranchId"
-            [disabled]="!destBankId || destBranches().length === 0 || submitting()"
+            [disabled]="!destState || destBranches().length === 0 || submitting()"
           >
             @for (br of destBranches(); track br.id) {
-              <ion-select-option [value]="br.id">{{ br.name }}</ion-select-option>
+              <ion-select-option [value]="br.id">
+                {{ br.name }}{{ br.bankName ? ' — ' + br.bankName : '' }}
+              </ion-select-option>
             }
           </ion-select>
         </ion-item>
@@ -282,16 +287,18 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
   private readonly toast = inject(ToastController);
   private readonly router = inject(Router);
 
-  protected readonly banks = signal<Bank[]>([]);
+  protected readonly states = NIGERIAN_STATES;
   protected readonly originBranches = signal<Branch[]>([]);
   protected readonly destBranches = signal<Branch[]>([]);
   protected readonly sealIds = signal<string[]>([]);
   protected readonly scanning = signal(false);
   protected readonly submitting = signal(false);
+  protected readonly loadingOriginBranches = signal(false);
+  protected readonly loadingDestBranches = signal(false);
 
-  protected originBankId: string | null = null;
+  protected originState: string | null = null;
   protected originBranchId: string | null = null;
-  protected destBankId: string | null = null;
+  protected destState: string | null = null;
   protected destBranchId: string | null = null;
   protected procType = '';
   protected note = '';
@@ -299,12 +306,11 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
   private session?: ScanSession;
 
   protected readonly canSubmit = computed(
-    () => !!this.originBankId && !!this.originBranchId && this.sealIds().length > 0,
+    () => !!this.originBranchId && this.sealIds().length > 0,
   );
 
   async ngOnInit(): Promise<void> {
-    const list = await this.bankSvc.getBanksWithCache();
-    this.banks.set(list);
+    // No upfront load — branches load when the user picks a state.
   }
 
   async ngOnDestroy(): Promise<void> {
@@ -312,22 +318,44 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
     this.session = undefined;
   }
 
-  async onOriginBankChange(): Promise<void> {
+  async onOriginStateChange(): Promise<void> {
     this.originBranchId = null;
-    if (!this.originBankId) {
+    if (!this.originState) {
       this.originBranches.set([]);
       return;
     }
-    this.originBranches.set(await this.bankSvc.getBranchesForBank(this.originBankId));
+    this.loadingOriginBranches.set(true);
+    try {
+      const list = await this.bankSvc.getBranchesByStateWithCache(this.originState, 'Bank');
+      this.originBranches.set(list);
+    } finally {
+      this.loadingOriginBranches.set(false);
+    }
   }
 
-  async onDestBankChange(): Promise<void> {
+  async onDestStateChange(): Promise<void> {
     this.destBranchId = null;
-    if (!this.destBankId) {
+    if (!this.destState) {
       this.destBranches.set([]);
       return;
     }
-    this.destBranches.set(await this.bankSvc.getBranchesForBank(this.destBankId));
+    this.loadingDestBranches.set(true);
+    try {
+      const list = await this.bankSvc.getBranchesByStateWithCache(this.destState, 'Bank');
+      this.destBranches.set(list);
+    } finally {
+      this.loadingDestBranches.set(false);
+    }
+  }
+
+  /** Look up the bank ID + name carried on the selected origin branch. */
+  private originBranchRecord(): Branch | undefined {
+    return this.originBranches().find((b) => b.id === this.originBranchId);
+  }
+
+  /** Look up the bank ID carried on the selected destination branch. */
+  private destBranchRecord(): Branch | undefined {
+    return this.destBranches().find((b) => b.id === this.destBranchId);
   }
 
   async startScan(): Promise<void> {
@@ -361,13 +389,21 @@ export class ManualEvacuationPage implements OnInit, OnDestroy {
       await this.showToast('Offline — will sync when connection returns.', 'warning');
     }
     await this.stopScan();
+
+    const originBranch = this.originBranchRecord();
+    const destBranch = this.destBranchRecord();
+    if (!originBranch?.bankId) {
+      await this.showToast('Origin branch is missing its bank id.', 'danger');
+      return;
+    }
+
     this.submitting.set(true);
     try {
       await this.evac.postManual({
-        bankId: this.originBankId!,
-        branchId: this.originBranchId!,
-        destinationBankId: this.destBankId ?? undefined,
-        destinationBranchId: this.destBranchId ?? undefined,
+        bankId: originBranch.bankId,
+        branchId: originBranch.id,
+        destinationBankId: destBranch?.bankId || undefined,
+        destinationBranchId: destBranch?.id || undefined,
         procType: this.procType.trim() || undefined,
         sealIds: this.sealIds(),
         note: this.note.trim() || undefined,
