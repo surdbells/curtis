@@ -2,16 +2,13 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import { ApiService } from './api.service';
 import { ActionBuilderService } from './action-builder.service';
-import { LocationService } from './location.service';
 import { SessionStore } from '../stores/session.store';
-import { DayStore } from '../stores/day.store';
-import { ACTION, STATUS } from '../models';
 import type { Seal } from '../models';
 
 export interface PostSealsInput {
   /** Seal record IDs the agent successfully scanned/confirmed. */
   sealIds: string[];
-  /** Optional note from the agent. */
+  /** Optional note from the agent (improvement over legacy). */
   note?: string;
 }
 
@@ -30,18 +27,20 @@ export interface PostSealsInput {
  *   (Source: BankActivity.java / RouteActivity.java -> String.valueOf
  *   on List<String> then strip [ ] and spaces.)
  *
- * TODO(phase-5-samples): tighten the Seal model with field names from a
- * real /GetIncomingSealsBy* response sample.
+ * Wire-shape parity with legacy:
+ *   RouteActivity posts: seals, userid, DateTime, routeid, batterylevel
+ *   BankActivity  posts: seals, userid, DateTime, bankid,  batterylevel
+ *   We match — no action, no status, no truckid, no lat/lng. The canonical
+ *   builder fills every other canonical field with "". `note` is the one
+ *   intentional improvement.
  */
 @Injectable({ providedIn: 'root' })
 export class SealService {
   private readonly api = inject(ApiService);
   private readonly builder = inject(ActionBuilderService);
-  private readonly location = inject(LocationService);
   private readonly session = inject(SessionStore);
-  private readonly day = inject(DayStore);
 
-  /** GET seals for the active route + current user. */
+  /** GET seals for a route + current user. */
   getIncomingByRoute(routeId: string): Observable<Seal[]> {
     const userId = this.session.userId() ?? '';
     const path = `/GetIncomingSealsByRoute/${encodeURIComponent(routeId)}/${encodeURIComponent(userId)}`;
@@ -55,16 +54,30 @@ export class SealService {
     return this.api.get<Seal[]>(path);
   }
 
-  async postIncomingByRoute(input: PostSealsInput): Promise<void> {
-    const dto = await this.buildDto(input, ACTION.INCOMING_SEALS_ROUTE, {
-      routeid: this.day.routeId(),
+  /**
+   * POST /PostIncomingSealsByRoute.
+   * @param routeId  The route code picked by the agent (e.g. "2a", "777").
+   *                 Matches legacy RouteActivity which sent the spinner
+   *                 selection — NOT the route's internal UUID.
+   */
+  async postIncomingByRoute(routeId: string, input: PostSealsInput): Promise<void> {
+    const dto = await this.builder.build({
+      seals: this.serialiseSealIds(input.sealIds),
+      routeid: routeId,
+      note: input.note ?? null,
     });
     await firstValueFrom(this.api.post<unknown>('/PostIncomingSealsByRoute', dto));
   }
 
+  /**
+   * POST /PostIncomingSealsByBank.
+   * @param bankId  The bank's clientid from the picker (UUID string).
+   */
   async postIncomingByBank(bankId: string, input: PostSealsInput): Promise<void> {
-    const dto = await this.buildDto(input, ACTION.INCOMING_SEALS_BANK, {
+    const dto = await this.builder.build({
+      seals: this.serialiseSealIds(input.sealIds),
       bankid: bankId,
+      note: input.note ?? null,
     });
     await firstValueFrom(this.api.post<unknown>('/PostIncomingSealsByBank', dto));
   }
@@ -72,24 +85,5 @@ export class SealService {
   /** Serialise seal IDs the way the legacy backend expects. */
   serialiseSealIds(ids: readonly string[]): string {
     return ids.filter(Boolean).join(',');
-  }
-
-  private async buildDto(
-    input: PostSealsInput,
-    action: string,
-    extras: Record<string, string | null>,
-  ) {
-    const coords = await this.location.tryGetCurrent();
-    return this.builder.build({
-      action,
-      status: STATUS.OK,
-      seals: this.serialiseSealIds(input.sealIds),
-      note: input.note ?? null,
-      truckid: this.day.truckId(),
-      routeid: this.day.routeId(),
-      latitude: coords ? String(coords.latitude) : null,
-      longitude: coords ? String(coords.longitude) : null,
-      ...extras,
-    });
   }
 }

@@ -1,6 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  NgZone,
   OnInit,
   OnDestroy,
   computed,
@@ -48,7 +49,10 @@ import type { Bank, Seal } from '../../core/models';
   styles: [
     `
       :host { display: block; }
-      ion-content { --background: var(--curtis-bg); }
+      ion-content {
+        --background: var(--curtis-bg);
+        --padding-bottom: calc(var(--curtis-space-24) + env(safe-area-inset-bottom, 0));
+      }
       ion-list { background: transparent; margin: 0 var(--curtis-space-3); }
       ion-list[inset] ion-item {
         --background: var(--curtis-surface-1);
@@ -154,7 +158,7 @@ import type { Bank, Seal } from '../../core/models';
     `,
   ],
   template: `
-    <curtis-header title="Bank seals" backHref="/dashboard" />
+    <curtis-header title="Scan by Bank" backHref="/dashboard" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />
@@ -279,6 +283,7 @@ export class BankScanPage implements OnInit, OnDestroy {
   private readonly connectivity = inject(ConnectivityService);
   private readonly toast = inject(ToastController);
   private readonly router = inject(Router);
+  private readonly zone = inject(NgZone);
 
   protected readonly banks = signal<Bank[]>([]);
   protected readonly expected = signal<Seal[]>([]);
@@ -338,7 +343,13 @@ export class BankScanPage implements OnInit, OnDestroy {
     if (this.scanning()) return;
     this.scanning.set(true);
     try {
-      this.session = await this.scanner.startContinuous((value) => this.recordScan(value));
+      this.session = await this.scanner.startContinuous((value) => {
+        // BarcodeScanner plugin callbacks land outside Angular's zone —
+        // re-enter so OnPush change detection ticks for the seal count
+        // chip + Submit button. Same pattern as manual-evacuation +
+        // route-scan.
+        this.zone.run(() => this.recordScan(value));
+      });
     } catch (err) {
       this.scanning.set(false);
       await this.showToast(this.describeError(err, 'Could not start scanner.'), 'danger');

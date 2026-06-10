@@ -1,6 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  NgZone,
   OnInit,
   OnDestroy,
   computed,
@@ -10,17 +11,18 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { IonicModule, ToastController } from '@ionic/angular';
+import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 
 import { SealService } from '../../core/services/seal.service';
 import { ScannerService } from '../../core/services/scanner.service';
-import { DayStore } from '../../core/stores/day.store';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { OfflineBannerComponent } from '../../shared/components/offline-banner/offline-banner.component';
 import { CurtisIconComponent } from '../../shared/components/icon';
 import { CurtisHeaderComponent } from '../../shared/components/header';
 import { SealListComponent } from '../../shared/components/seal-list/seal-list.component';
 import { ScanButtonComponent } from '../../shared/components/scan-button/scan-button.component';
+import { ROUTE_CODES } from '../../core/models';
 import type { ScanSession } from '../../core/services/scanner.service';
 import type { Seal } from '../../core/models';
 
@@ -45,11 +47,17 @@ import type { Seal } from '../../core/models';
   selector: 'curtis-route-scan',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonicModule, OfflineBannerComponent, SealListComponent, ScanButtonComponent, CurtisIconComponent, CurtisHeaderComponent],
+  imports: [CommonModule, IonicModule, FormsModule, OfflineBannerComponent, SealListComponent, ScanButtonComponent, CurtisIconComponent, CurtisHeaderComponent],
   styles: [
     `
       :host { display: block; }
-      ion-content { --background: var(--curtis-bg); }
+      ion-content {
+        --background: var(--curtis-bg);
+        --padding-bottom: calc(var(--curtis-space-24) + env(safe-area-inset-bottom, 0));
+      }
+      .route-picker {
+        margin: var(--curtis-space-2) 0 0;
+      }
 
       .progress-card {
         margin: var(--curtis-space-3) var(--curtis-space-4);
@@ -145,7 +153,7 @@ import type { Seal } from '../../core/models';
     `,
   ],
   template: `
-    <curtis-header title="Route seals" backHref="/dashboard" />
+    <curtis-header title="Scan by Route" backHref="/dashboard" />
 
     <ion-content [fullscreen]="true">
       <curtis-offline-banner />
@@ -160,7 +168,36 @@ import type { Seal } from '../../core/models';
         </div>
       </div>
 
-      @if (loading()) {
+      <!-- Route picker (matches legacy RouteActivity spinner) -->
+      <div class="route-picker">
+        <ion-list inset>
+          <ion-item>
+            <ion-select
+              label="Route"
+              labelPlacement="stacked"
+              interface="action-sheet"
+              placeholder="Select route"
+              [(ngModel)]="selectedRouteId"
+              (ionChange)="onRouteChange()"
+              [disabled]="loading() || submitting()"
+            >
+              @for (code of routeCodes; track code) {
+                <ion-select-option [value]="code">{{ code }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+        </ion-list>
+      </div>
+
+      @if (!selectedRouteId) {
+        <div class="curtis-empty">
+          <div class="curtis-empty__well">
+            <curtis-icon name="navigate-outline" size="xl" [strokeWidth]="1.5" />
+          </div>
+          <div class="curtis-empty__title">Pick a route</div>
+          <div class="curtis-empty__body">Choose the route you're scanning seals for.</div>
+        </div>
+      } @else if (loading()) {
         <div class="curtis-empty">
           <div class="curtis-empty__well">
             <ion-spinner name="crescent" />
@@ -238,10 +275,16 @@ import type { Seal } from '../../core/models';
 export class RouteScanPage implements OnInit, OnDestroy {
   private readonly seals = inject(SealService);
   private readonly scanner = inject(ScannerService);
-  private readonly day = inject(DayStore);
   private readonly connectivity = inject(ConnectivityService);
   private readonly toast = inject(ToastController);
   private readonly router = inject(Router);
+  private readonly zone = inject(NgZone);
+
+  /** Spinner options — matches legacy R.array.routes verbatim. */
+  protected readonly routeCodes = ROUTE_CODES;
+
+  /** Picked route code. Drives seal fetch + submit payload. */
+  protected selectedRouteId: string | null = null;
 
   protected readonly expected = signal<Seal[]>([]);
   protected readonly scannedIds = signal<Set<string>>(new Set<string>());
@@ -269,14 +312,20 @@ export class RouteScanPage implements OnInit, OnDestroy {
   });
 
   async ngOnInit(): Promise<void> {
-    const routeId = this.day.routeId();
-    if (!routeId) {
-      await this.showToast('No active route. Return to dashboard.', 'warning');
-      return;
-    }
+    // Nothing to pre-load — wait for the agent to pick a route.
+  }
+
+  /** Picker change — reset scan state and refetch expected seals. */
+  async onRouteChange(): Promise<void> {
+    this.scannedIds.set(new Set());
+    this.unknownScans.set([]);
+    this.expected.set([]);
+    if (!this.selectedRouteId) return;
     this.loading.set(true);
     try {
-      const list = await firstValueFrom(this.seals.getIncomingByRoute(routeId)).catch(() => []);
+      const list = await firstValueFrom(
+        this.seals.getIncomingByRoute(this.selectedRouteId),
+      ).catch(() => []);
       this.expected.set(list ?? []);
     } finally {
       this.loading.set(false);
@@ -289,10 +338,15 @@ export class RouteScanPage implements OnInit, OnDestroy {
   }
 
   async startScan(): Promise<void> {
-    if (this.scanning()) return;
+    if (this.scanning() || !this.selectedRouteId) return;
     this.scanning.set(true);
     try {
-      this.session = await this.scanner.startContinuous((value) => this.recordScan(value));
+      this.session = await this.scanner.startContinuous((value) => {
+        // The native BarcodeScanner plugin emits callbacks OUTSIDE Angular's
+        // NgZone — re-enter so OnPush change detection ticks for the seal
+        // count + Submit button. Same pattern as manual-evacuation.page.
+        this.zone.run(() => this.recordScan(value));
+      });
     } catch (err) {
       this.scanning.set(false);
       await this.showToast(this.describeError(err, 'Could not start scanner.'), 'danger');
@@ -331,7 +385,7 @@ export class RouteScanPage implements OnInit, OnDestroy {
   }
 
   async submit(): Promise<void> {
-    if (this.submitting() || this.scannedCount() === 0) return;
+    if (this.submitting() || this.scannedCount() === 0 || !this.selectedRouteId) return;
     if (!this.connectivity.online()) {
       await this.showToast('Offline — submission will sync when connection returns.', 'warning');
     }
@@ -341,7 +395,7 @@ export class RouteScanPage implements OnInit, OnDestroy {
       const ids = Array.from(this.scannedIds());
       // Also append any unknown raw scans so the backend can audit them.
       const allIds = ids.concat(this.unknownScans());
-      await this.seals.postIncomingByRoute({ sealIds: allIds });
+      await this.seals.postIncomingByRoute(this.selectedRouteId, { sealIds: allIds });
       await this.showToast('Seals submitted.', 'success');
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (err) {
