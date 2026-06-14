@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from './api.service';
 import { ActionBuilderService } from './action-builder.service';
-import { LocationService } from './location.service';
+import { LocationGateService } from './location-gate.service';
 import { SignatureService } from './signature.service';
 import { ACTION } from '../models';
 
@@ -46,6 +46,9 @@ export interface RetailEvacuationInput {
  *   PROCESS_TYPE    = "proctype"               (processing type)
  *   SEALS           = "seals"                  (comma-separated)
  *
+ * latitude/longitude come from the canonical builder via LocationGate —
+ * no per-call fetch needed.
+ *
  * Legacy ManualActivity does NOT include `action`, `status`, `routeid`,
  * `truckid`, or `note` on the manual-evacuation POST. We follow that
  * shape — those fields are left at the canonical "" default produced
@@ -57,45 +60,43 @@ export interface RetailEvacuationInput {
 export class EvacuationService {
   private readonly api = inject(ApiService);
   private readonly builder = inject(ActionBuilderService);
-  private readonly location = inject(LocationService);
+  private readonly locationGate = inject(LocationGateService);
   private readonly signatureHelper = inject(SignatureService);
 
   async postManual(input: ManualEvacuationInput): Promise<void> {
-    const coords = await this.location.tryGetCurrent();
+    await this.ensureCoords('Location required to submit a manual evacuation.');
     const dto = await this.builder.build({
-      // Origin (legacy: BANK_ID="originationid", BRANCH_ID="originationbranchid")
       originationid: input.bankId,
       originationbranchid: input.branchId,
-      // Destination (legacy: hardcoded ""; we accept user input where given)
       destinationbankid: input.destinationBankId ?? null,
       destinationbranchid: input.destinationBranchId ?? null,
-      // Processing type (legacy: PROCESS_TYPE="proctype")
       proctype: input.procType ?? null,
-      // Comma-joined seal IDs (legacy: SEALS="seals", same convention)
       seals: input.sealIds.filter(Boolean).join(','),
-      // Optional note (improvement over legacy; kept for audit trail)
       note: input.note ?? null,
-      latitude: coords ? String(coords.latitude) : null,
-      longitude: coords ? String(coords.longitude) : null,
     });
     await firstValueFrom(this.api.post<unknown>('/PostManualEvacuation', dto));
   }
 
   async postRetail(input: RetailEvacuationInput): Promise<void> {
-    const coords = await this.location.tryGetCurrent();
+    await this.ensureCoords('Location required to submit a retail evacuation.');
     const rawImage = this.signatureHelper.toRawBase64(input.imageBase64);
     const dto = await this.builder.build({
       action: ACTION.EVACUATION_RECEIPT,
-      // Reuse bankid/branchid fields for retailer/retailer-branch IDs.
-      // The legacy backend treats clientType=Retail via the same keys.
       bankid: input.retailerId,
       branchid: input.retailerBranchId,
       refnumber: input.refNumber ?? null,
       image: rawImage,
       note: input.note ?? null,
-      latitude: coords ? String(coords.latitude) : null,
-      longitude: coords ? String(coords.longitude) : null,
     });
     await firstValueFrom(this.api.post<unknown>('/PostEvacuationReceipt', dto));
+  }
+
+  /** Refresh coords and throw with prompt if still missing. */
+  private async ensureCoords(missingMessage: string): Promise<void> {
+    await this.locationGate.refresh();
+    if (!this.locationGate.getLatest()) {
+      void this.locationGate.promptForLocation();
+      throw new Error(missingMessage);
+    }
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { DeviceService } from './device.service';
+import { LocationGateService } from './location-gate.service';
 import { SessionStore } from '../stores/session.store';
 import { formatLegacyDateTimeUtc, nowIsoUtc } from '../utils';
 import type { DevicePostDto } from '../models';
@@ -74,10 +75,19 @@ const CANONICAL_FIELDS: readonly (keyof DevicePostDto)[] = [
 export class ActionBuilderService {
   private readonly device = inject(DeviceService);
   private readonly session = inject(SessionStore);
+  private readonly locationGate = inject(LocationGateService);
 
   /**
    * Build a DevicePostDto. Spread the overrides last so callers can override
    * any auto-filled field explicitly when needed.
+   *
+   * Auto-filled fields:
+   *   deviceId        — DeviceService cache
+   *   utcDateTime     — current UTC, wire-formatted at the bottom
+   *   userid          — current SessionStore.userId()
+   *   batterystatus   — DeviceService battery level
+   *   latitude        — LocationGateService.getLatest()
+   *   longitude       — LocationGateService.getLatest()
    *
    * @returns a plain object suitable for HttpClient.post — every canonical
    *          field is present, with `""` for fields the caller did not
@@ -88,6 +98,7 @@ export class ActionBuilderService {
   async build(overrides: Partial<DevicePostDto> = {}): Promise<Record<string, string>> {
     const ctx = await this.device.getContext(true).catch(() => null);
     const userId = this.session.userId();
+    const coords = this.locationGate.getLatest();
 
     const autoFilled: Record<string, string> = {
       deviceId: ctx?.deviceId ?? '',
@@ -95,6 +106,8 @@ export class ActionBuilderService {
       userid: userId ?? '',
       batterystatus:
         ctx?.batteryLevel !== undefined ? String(ctx.batteryLevel) : '',
+      latitude: coords ? String(coords.latitude) : '',
+      longitude: coords ? String(coords.longitude) : '',
     };
 
     // Start with every canonical field set to "", then layer auto-fills,

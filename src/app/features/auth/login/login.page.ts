@@ -12,6 +12,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { TokenService } from '../../../core/services/token.service';
 import { PushService } from '../../../core/services/push.service';
 import { OnboardingService } from '../../../core/services/onboarding.service';
+import { LocationGateService } from '../../../core/services/location-gate.service';
 
 /**
  * LoginPage — Phase 9 redesign.
@@ -284,6 +285,7 @@ export class LoginPage implements OnInit {
   private readonly tokens = inject(TokenService);
   private readonly push = inject(PushService);
   private readonly onboarding = inject(OnboardingService);
+  private readonly locationGate = inject(LocationGateService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastController);
 
@@ -323,6 +325,16 @@ export class LoginPage implements OnInit {
 
       await this.haptic(NotificationType.Success);
       void this.push.register().catch(() => undefined);
+
+      // Activate location gate — request permission, take first fix, start
+      // refresh loop. Subsequent API calls auto-stamp lat/long from this.
+      // If the user denies or location services are off, show the standard
+      // "Location required" alert that walks them to settings.
+      const hasFix = await this.locationGate.activate();
+      if (!hasFix) {
+        void this.locationGate.promptForLocation();
+      }
+
       const target = this.onboarding.completed() ? '/dashboard' : '/onboarding';
       await this.router.navigateByUrl(target, { replaceUrl: true });
     } catch (err) {
